@@ -1,0 +1,65 @@
+export default {
+    content: [
+        './storage/framework/views/*.php',
+        './resources/**/*.blade.php',
+        './resources/**/*.jsx',
+        './resources/**/*.js',
+    ],
+    theme: {
+        extend: {
+            colors: {
+                primary: {
+                    50: '#eff6ff',
+                    100: '#dbeafe',
+                    200: '#bfdbfe',
+                    300: '#93c5fd',
+                    400: '#60a5fa',
+                    500: '#3b82f6',
+                    600: '#2563eb',
+                    700: '#1d4ed8',
+                    800: '#1e40af',
+                    900: '#1e3a8a',
+                    950: '#172554',
+                },
+                surface: {
+                    50: '#0a0e17',
+                    100: '#111827',
+                    200: '#1a2030',
+                    300: '#1e293b',
+                    400: '#334155',
+                    500: '#64748b',
+                    600: '#94a3b8',
+                    700: '#cbd5e1',
+                    800: '#e2e8f0',
+                    900: '#f1f5f9',
+                    950: '#f8fafc',
+                },
+                accent: {
+                    DEFAULT: '#3b82f6',
+                    light: '#60a5fa',
+                    dim: '#2563eb',
+                    glow: 'rgba(59, 130, 246, 0.15)',
+                },
+                security: {
+                    DEFAULT: '#10b981',
+                    light: '#34d399',
+                    dim: '#059669',
+                    glow: 'rgba(16, 185, 129, 0.15)',
+                },
+            },
+            fontFamily: {
+                sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+            },
+            boxShadow: {
+                'glow-sm': '0 0 15px rgba(59, 130, 246, 0.1)',
+                'glow': '0 0 30px rgba(59, 130, 246, 0.15)',
+                'glow-lg': '0 0 60px rgba(59, 130, 246, 0.2)',
+                'card': '0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4)',
+                'card-lg': '0 4px 24px rgba(0, 0, 0, 0.4)',
+            },
+        },
+    },
+    plugins: [],
+    important: true,
+};

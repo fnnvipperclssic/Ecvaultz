@@ -1,0 +1,220 @@
+ Rancangan Web App Project: Ecvaultz  
+ Digital Vault Berbasis Website dengan Keamanan Tertinggi
+
+ 1. Pendahuluan
+Ecvaultz adalah layanan *digital vault* (brankas digital) berbasis web yang memungkinkan pengguna menyimpan, mengelola, dan berbagi berkas digital secara aman. Mengutamakan kerahasiaan, integritas, dan ketersediaan data dengan tingkat keamanan setara standar industri (OWASP, NIST). Aplikasi dibangun menggunakan *framework* modern, ringan, cepat, dan dapat diandalkan dengan basis data MariaDB.
+
+ 2. Teknologi yang Digunakan (Stack)
+
+| Lapisan       | Teknologi                         | Alasan                                                                 |
+|---------------|-----------------------------------|------------------------------------------------------------------------|
+| Backend       | Laravel 11 (PHP 8.2+)         | Keamanan built‑in (CSRF, XSS, SQL injection via Eloquent), komunitas besar, dukungan 2FA, session management, queue.   |
+| Frontend      | Inertia.js + React 18         | SPA-like tanpa kehilangan keamanan server‑side rendering, ringan, reaktif. Alternatif: Livewire untuk lebih ringan.       |
+| Database      | MariaDB 10.11 (atau 11.x)     | Performa tinggi, kompatibel dengan MySQL, mendukung transaksi ACID, enkripsi data at-rest.                                  |
+| Cache/Session | Redis                         | Session handler cepat, opsional untuk rate limiting & job queue.                                                           |
+| Web Server    | Nginx + PHP‑FPM           | Ringan, mampu menangani banyak koneksi simultan.                                                                            |
+| Environment   | Docker (opsional) atau VPS dengan Ubuntu 22.04 | Isolasi, reproduksi lingkungan mudah.                                                                                      |
+
+Framework pendukung keamanan:  
+- `laravel/sanctum` (token API & session)  
+- `pragmarx/google2fa-laravel` (TOTP untuk 2FA)  
+- `spatie/laravel-permission` (manajemen role/permission)  
+- `laravel/cashier` (jika ada fitur premium – opsional)
+
+ 3. Arsitektur Sistem
+
+```
+[Client] <--HTTPS--> [Nginx] --> [Laravel App] --> [MariaDB]  
+                          |                |  
+                     [Redis]        [Storage (File Server)]
+```
+
+- Semua komunikasi melalui HTTPS dengan HSTS (HTTP Strict Transport Security).  
+- File disimpan di luar *public directory*, dengan nama terenkripsi (random string).  
+- Akses file melalui *signed URLs* (expirable) atau proxy download via controller.  
+- Session & token disimpan di Redis (atau database terenkripsi).  
+- Isolasi permission berbasis *policy Laravel* (setiap akses file, folder, setting diverifikasi).
+
+ 4. Penanganan 11 Poin Keamanan Wajib
+
+ 4.1 Input Validation (XSS)
+- Validasi sisi server menggunakan *Form Request* Laravel (rule `string`, `max`, `regex`).  
+- Sanitasi output otomatis oleh Blade/Inertia (React melakukan *escaping* default).  
+- Content Security Policy (CSP) dikirim via header untuk memblokir skrip tidak sah.  
+- HTTPOnly & Secure cookie untuk session token – mencegah XSS mencuri cookie.
+
+ 4.2 SQL Injection
+- Laravel Eloquent & Query Builder menggunakan *parameter binding* secara otomatis.  
+- Raw query dilarang di kode produksi (kecuali dengan `DB::select` yang sudah terikat parameter).  
+- Input dari user selalu melewati validasi dan *binding*.
+
+ 4.3 Keamanan Password
+- Hashing menggunakan Argon2id (default Laravel 11, lebih aman dari bcrypt).  
+- Kebijakan password minimum : panjang ≥12 karakter, minimal 1 huruf besar, 1 angka, 1 simbol.  
+- Pencegahan password umum (cek dengan library `spatie/laravel-password-validation`).  
+- Hash salt otomatis disertakan dalam algoritma, tidak perlu disimpan terpisah.
+
+ 4.4 Session Management
+- Session driver menggunakan Redis untuk performa dan *atomic lock*.  
+- Cookie session : `Secure`, `HttpOnly`, `SameSite=Strict`, dan `Domain` terbatas.  
+- Regenerasi session ID setelah login, logout, dan perubahan role (gunakan `session()->regenerate()`).  
+- Waktu kadaluarsa session : 30 menit inaktivitas, dapat diperpanjang dengan *keep‑alive* opsional.  
+- Logout otomatis jika IP atau *user agent* berubah secara mencolok.
+
+ 4.5 File Upload
+- Validasi ekstensi : hanya izinkan `pdf`, `docx`, `xlsx`, `jpg`, `png`, `7z` (sesuai kebutuhan).  
+- Validasi MIME type menggunakan `mimes:...` rule Laravel.  
+- Batasan ukuran : 50 MB per file (dapat dikonfigurasi).  
+- Scan antivirus sebelum disimpan (integrasi dengan `ClamAV` di backend).  
+- Penamaan file : `uniqid()` + random hash (panjang 32 karakter), tanpa nama asli di server.  
+- File disimpan di disk `private` (storage/app/private) – tidak bisa diakses langsung via URL.  
+- Isolasi eksekusi : folder upload tidak memiliki izin `+x` untuk PHP.
+
+ 4.6 Permission Server
+- Setiap file/folder memiliki *owner* (user_id).  
+- Sharing dilakukan melalui *access control* (tabel `file_shares` dengan `user_id`, `permission` (read/write)).  
+- Laravel Policy :  
+  - `view` – hanya owner atau user yang mendapat akses baca.  
+  - `update` – owner atau user dengan write permission.  
+  - `delete` – hanya owner.  
+- Middleware `can:view,file` diterapkan di setiap route file.  
+- Izin server : folder penyimpanan hanya bisa diakses oleh proses web user (`www-data`), permission `750`.
+
+ 4.7 File Download
+- Semua download melalui endpoint terproteksi, misal: `/secure/download/{fileUuid}`.  
+- Cek policy sebelum mengirim file ke user.  
+- Response download menggunakan `Storage::download()` Laravel (streaming).  
+- Log akses : catat IP, user, timestamp, file yang diunduh.  
+- Signed URL (opsional) untuk *share link* dengan waktu kadaluarsa (misal 1 jam).  
+- Prevent hotlinking dengan memeriksa referer (opsional) dan token.
+
+ 4.8 User Data Setting
+- Halaman profil : ubah nama, email, password, avatar, preferensi.  
+- Verifikasi ulang password untuk perubahan data sensitif (email, password, 2FA).  
+- User dapat menonaktifkan akun (soft delete) atau menghapus permanen dengan konfirmasi.  
+- Data user dienkripsi : kolom `email`, `name` tidak sensitif, namun informasi pembayaran (jika ada) dienkripsi AES‑256.  
+- Log aktivitas user (login, upload, download, delete) tersimpan di tabel logs.
+
+ 4.9 Reset Password
+- Fitur lupa password standar Laravel (token disimpan di tabel `password_reset_tokens`).  
+- Token memiliki masa berlaku 60 menit, hanya sekali pakai.  
+- Link reset dikirim ke email terdaftar (menggunakan queue agar tidak blocking).  
+- Setelah reset, semua session lain di-terminate (implementasi dengan `logoutOtherDevices`).  
+- Rate limiting : maksimal 3 permintaan reset per email per jam.
+
+ 4.10 2FA dengan TOTP (Time‑based One‑Time Password)
+- Implementasi : `pragmarx/google2fa` + `bacon/bacon-qr-code`.  
+- Proses setup :  
+  1. User generate rahasia (secret) dan QR code.  
+  2. Scan dengan Google Authenticator / Authy.  
+  3. Verifikasi OTP pertama.  
+  4. Simpan `google2fa_secret` di database (dienkripsi dengan app key).  
+- Login 2FA : setelah password benar, user dimasukkan ke halaman kode OTP (sementara disimpan session).  
+- Recovery codes : dihasilkan 8 kode sekali pakai, disimpan hash.  
+- Force 2FA dapat diaktifkan untuk semua user (kebijakan admin).
+
+ 4.11 File/Data Delete
+- Soft delete untuk file penting (`deleted_at`) – dapat dipulihkan dalam 30 hari.  
+- Hard delete permanent (setelah 30 hari) dijalankan oleh cron job.  
+- Hapus banyak file (bulk delete) : batasi maksimal 100 file per permintaan.  
+- Log delete : siapa, kapan, file apa.  
+- Persetujuan kedua (konfirmasi ulang password atau 2FA) untuk menghapus lebih dari 10 file sekaligus.  
+- Data user yang dihapus permanent : semua file terkait juga di-hard delete dari disk.
+
+ 5. Struktur Database (MariaDB) – Sederhana namun Cukup
+
+```sql
+-- Tabel users (Laravel default + kolom 2FA)
+users:
+  id (PK)
+  name
+  email (unique)
+  email_verified_at
+  password
+  google2fa_secret (encrypted)
+  two_factor_enabled (boolean)
+  recovery_codes (json hashed)
+  created_at, updated_at, deleted_at (soft delete)
+
+-- Tabel files
+files:
+  id (PK)
+  uuid (unique index)
+  user_id (FK ke users)
+  original_name (max 255)
+  stored_name (random string, 64 char)
+  mime_type
+  size (bytes)
+  path (relative dalam storage)
+  is_encrypted (boolean) -- opsional, enkripsi server-side
+  uploaded_at
+  deleted_at
+
+-- Tabel file_shares
+file_shares:
+  id (PK)
+  file_id (FK)
+  shared_with_user_id (FK)
+  permission (enum: 'read', 'write')
+  created_at
+  expired_at (nullable)
+
+-- Tabel activity_logs
+activity_logs:
+  id (PK)
+  user_id (FK)
+  action (string) -- 'upload', 'download', 'delete', 'login', 'logout'
+  ip_address
+  user_agent
+  metadata (json)
+  created_at
+```
+
+ 6. Fitur Utama Aplikasi Ecvaultz
+
+| Modul         | Deskripsi                                                                 |
+|---------------|---------------------------------------------------------------------------|
+| Autentikasi | Login/register, 2FA TOTP, lupa password, session perangkat.              |
+| Dashboard   | Daftar file & folder (virtual), tampilan grid/list, pencarian.           |
+| Upload      | Drag & drop, progress bar, upload simultan.                              |
+| Download    | Download single atau zip batch (menggunakan `ZipArchive` di server).      |
+| File Preview| Preview PDF, gambar (via endpoint aman).                                 |
+| Bagikan     | Generate share link dengan password & expired, atau share ke user internal. |
+| Manajemen   | Edit nama file, pindah ke folder, hapus, restore dari trash.             |
+| Pengaturan  | Profil, ubah password, aktifkan/nonaktifkan 2FA, hapus akun.             |
+| Log Aktivitas| Riwayat akses file, login, perubahan pengaturan.                         |
+
+ 7. Implementasi Teknis untuk Performa & Keandalan
+
+- Caching : daftar file user di-cache selama 5 menit (Redis), di‑invalidate saat upload/delete.  
+- Queue : upload besar diproses secara asynchronous (Laravel queue worker) agar tidak memblokir respons.  
+- Rate limiting : maksimal 10 upload per menit per user; 20 download per menit.  
+- Database indexing : `user_id`, `uuid`, `deleted_at` untuk mempercepat query.  
+- CDN optional : jika file public (share link) dapat dikirim via CloudFront dengan signed cookie.  
+- Backup : otomatis backup database + file storage setiap hari ke tempat terpisah (S3 atau server lain).  
+
+ 8. Panduan Deployment & Security Hardening
+
+1. Environment :  
+   - Set `APP_DEBUG=false` di production.  
+   - Gunakan `.env` dengan kunci rahasia (APP_KEY) yang kuat.  
+   - Wajib HTTPS dengan sertifikat Let's Encrypt.  
+
+2. Izin direktori :  
+   - `storage/` dan `bootstrap/cache/` writable oleh web server.  
+   - Folder `public/` hanya berisi asset statis.  
+
+3. Firewall : blokir port selain 80, 443, 22 (SSH).  
+4. Fail2ban untuk melindungi dari brute force login.  
+5. Audit keamanan rutin dengan tools seperti `Laravel Auditor` & `OWASP Dependency Check`.  
+
+ 9. Kesimpulan
+
+Rancangan Ecvaultz di atas memenuhi semua 11 poin keamanan wajib dengan pendekatan *defense in depth*. Menggunakan Laravel 11 + MariaDB yang ringan, cepat, dan sesuai standar industri. Dengan menerapkan session management modern, validasi ketat, 2FA TOTP, permission server berbasis policy, serta perlindungan terhadap file upload/download, aplikasi ini siap digunakan sebagai brankas digital andal untuk individu maupun perusahaan.
+
+Langkah selanjutnya :  
+- Membangun MVP dengan mengimplementasikan fitur inti (upload/download & autentikasi).  
+- Melakukan *penetration testing* sebelum rilis publik.  
+- Menyusun dokumentasi pengguna dan panduan *incident response*.  
+
+Dengan rancangan ini, Ecvaultz dapat dikembangkan secara iteratif tanpa mengurangi aspek keamanan dan performa.
