@@ -60,6 +60,15 @@ class RegisteredUserController extends Controller
             'last_login_ip' => $request->ip(),
         ]);
 
+        // Generate per-user encryption key and store encrypted
+        $encryptionService = app(\App\Services\FileEncryptionService::class);
+        $rawKey = $encryptionService->generateUserKey();
+        $user->encryption_key = \Illuminate\Support\Facades\Crypt::encryptString($rawKey);
+        $user->save();
+
+        // Assign default User role
+        $user->assignRole('User');
+
         event(new Registered($user));
 
         Auth::login($user);

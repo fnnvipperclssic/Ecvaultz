@@ -118,7 +118,8 @@ class ShareController extends Controller
             $shareData['shared_with_user_id'] = $sharedWith->id;
         } else {
             $shareData['external_email'] = $request->email;
-            $shareData['share_link_token'] = Str::random(64);
+            $rawToken = Str::random(64);
+            $shareData['share_link_token'] = hash('sha256', $rawToken);
 
             if ($request->password) {
                 $shareData['share_link_password'] = Hash::make($request->password);
@@ -148,7 +149,7 @@ class ShareController extends Controller
         if ($request->type === 'external') {
             return back()->with([
                 'success' => $message,
-                'share_link' => route('share.access', ['token' => $share->share_link_token]),
+                'share_link' => route('share.access', ['token' => $rawToken]),
             ]);
         }
 
@@ -178,7 +179,8 @@ class ShareController extends Controller
 
     public function accessViaLink(Request $request, string $token): Response|RedirectResponse
     {
-        $share = FileShare::where('share_link_token', $token)
+        $hashedToken = hash('sha256', $token);
+        $share = FileShare::where('share_link_token', $hashedToken)
             ->with('file')
             ->firstOrFail();
 
@@ -232,7 +234,8 @@ class ShareController extends Controller
 
     public function downloadViaLink(Request $request, string $token)
     {
-        $share = FileShare::where('share_link_token', $token)
+        $hashedToken = hash('sha256', $token);
+        $share = FileShare::where('share_link_token', $hashedToken)
             ->with('file')
             ->firstOrFail();
 

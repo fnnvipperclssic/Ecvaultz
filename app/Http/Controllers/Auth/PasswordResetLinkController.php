@@ -23,14 +23,34 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'string', 'email'],
         ]);
 
+        $user = \App\Models\User::where('email', $request->email)->first();
+
+        // If user exists and has security questions, offer that option
+        if ($user) {
+            $questionService = app(\App\Services\SecurityQuestionService::class);
+            if ($questionService->hasQuestions($user)) {
+                // Store email in session and redirect to security questions verification
+                session()->put('password_reset_email', $request->email);
+
+                ActivityLog::log($user->id, 'password_reset_security_questions_offered', $request->ip(), $request->userAgent());
+
+                return redirect()->route('password.security-questions')->with('success',
+                    'You have security questions set up. Please answer them to reset your password, or use the email link below.');
+            }
+        }
+
+        // Fall back to email-based reset
         $status = Password::sendResetLink(
             $request->only('email')
         );
 
-        if ($status === Password::RESET_LINK_SENT) {
-            ActivityLog::log(null, 'password_reset_requested', $request->ip(), $request->userAgent(), [
+        if ($status === Password::RESET_LINK_SENT && $user) {
+            ActivityLog::log($user->id, 'password_reset_requested', $request->ip(), $request->userAgent(), [
                 'email' => $request->email,
             ]);
+        } elseif (!$user) {
+            // Always return success to prevent user enumeration
+            return back()->with('success', 'If that email exists, a password reset link has been sent.');
         }
 
         return $status === Password::RESET_LINK_SENT

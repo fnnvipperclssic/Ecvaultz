@@ -169,8 +169,8 @@ export default function Landing() {
             {/* Hero */}
             <section className="relative overflow-hidden bg-surface-50 pt-32 pb-20 sm:pt-40 sm:pb-28">
                 {/* Ambient glow orbs */}
-                <div className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/3 h-[600px] w-[600px] rounded-full bg-primary-600/10 blur-[140px]" />
-                <div className="absolute bottom-0 left-0 -translate-x-1/4 translate-y-1/3 h-[500px] w-[500px] rounded-full bg-blue-500/8 blur-[140px]" />
+                <div className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/3 h-[600px] w-[600px] rounded-full bg-primary-600/10 blur-[140px] animate-pulse-glow" />
+                <div className="absolute bottom-0 left-0 -translate-x-1/4 translate-y-1/3 h-[500px] w-[500px] rounded-full bg-cyan-400/8 blur-[140px] animate-pulse-glow" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-primary-500/5 blur-[120px]" />
 
                 {/* Grid pattern */}
@@ -193,7 +193,7 @@ export default function Landing() {
 
                         <h1 className="text-4xl font-extrabold tracking-tight text-surface-900 sm:text-5xl lg:text-6xl">
                             Your Digital{' '}
-                            <span className="bg-gradient-to-r from-primary-400 via-blue-400 to-primary-300 bg-clip-text text-transparent">
+                            <span className="bg-gradient-to-r from-primary-400 via-purple-300 to-accent-cyan bg-clip-text text-transparent">
                                 Vault
                             </span>
                             {' '}for Maximum Security

@@ -33,8 +33,8 @@ Route::middleware('guest')->group(function () {
     Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.update');
 });
 
-// 2FA challenge routes (separate from full auth)
-Route::middleware('guest')->group(function () {
+// 2FA challenge routes (separate from full auth, with rate limiting)
+Route::middleware(['guest', 'throttle:2fa'])->group(function () {
     Route::get('2fa/challenge', [TwoFactorController::class, 'showChallenge'])->name('2fa.challenge');
     Route::post('2fa/challenge', [TwoFactorController::class, 'verifyChallenge']);
 });
@@ -43,6 +43,12 @@ Route::middleware('guest')->group(function () {
 Route::get('share/{token}', [ShareController::class, 'accessViaLink'])->name('share.access');
 Route::post('share/{token}', [ShareController::class, 'accessViaLink']);
 Route::get('share/{token}/download', [ShareController::class, 'downloadViaLink'])->name('share.download');
+
+// Security questions verification (public, during password reset)
+Route::get('password/security-questions', [App\Http\Controllers\Auth\SecurityQuestionController::class, 'showVerify'])
+    ->name('password.security-questions');
+Route::post('security-questions/verify', [App\Http\Controllers\Auth\SecurityQuestionController::class, 'verify'])
+    ->name('security-questions.verify');
 
 // Email verification routes (must be authenticated but NOT email-verified)
 Route::middleware(['auth'])->group(function () {
@@ -60,6 +66,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('2fa/recovery-codes', [TwoFactorController::class, 'showRecoveryCodes'])->name('2fa.recovery.show');
     Route::post('2fa/recovery-codes/regenerate', [TwoFactorController::class, 'regenerateRecoveryCodes'])->name('2fa.recovery.regenerate');
 
+    // Security Questions
+    Route::get('security-questions', [App\Http\Controllers\Auth\SecurityQuestionController::class, 'create'])
+        ->name('security-questions.create');
+    Route::post('security-questions', [App\Http\Controllers\Auth\SecurityQuestionController::class, 'store'])
+        ->name('security-questions.store');
+
     // Profile routes
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -72,8 +84,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
 
-// Main application routes (authenticated + 2FA verified)
-Route::middleware(['auth', 'verified', '2fa'])->group(function () {
+// Main application routes (authenticated + 2FA verified + password expiry check)
+Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPasswordExpiry::class])->group(function () {
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -104,6 +116,11 @@ Route::middleware(['auth', 'verified', '2fa'])->group(function () {
     // Activity Logs
     Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 
+    // Notifications
+    Route::get('notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('notifications/read-all', [App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+
     // Secure avatar serving
     Route::get('secure/avatar/{user}', function (App\Models\User $user) {
         if ($user->avatar_path && Storage::disk('private')->exists($user->avatar_path)) {
@@ -111,4 +128,19 @@ Route::middleware(['auth', 'verified', '2fa'])->group(function () {
         }
         abort(404);
     })->name('secure.avatar');
+});
+
+// Admin routes (auth + 2FA + permission:admin.access)
+Route::middleware(['auth', 'verified', '2fa', 'permission:admin.access'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/users', [App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('users.index');
+    Route::get('/users/{user}', [App\Http\Controllers\Admin\UserManagementController::class, 'show'])->name('users.show');
+    Route::get('/users/{user}/edit', [App\Http\Controllers\Admin\UserManagementController::class, 'edit'])->name('users.edit');
+    Route::patch('/users/{user}', [App\Http\Controllers\Admin\UserManagementController::class, 'update'])->name('users.update');
+    Route::post('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'ban'])->name('users.ban');
+    Route::post('/users/{user}/unban', [App\Http\Controllers\Admin\UserManagementController::class, 'unban'])->name('users.unban');
+    Route::get('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings');
+    Route::patch('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('settings.update');
+    Route::get('/activity-log', [App\Http\Controllers\Admin\ActivityLogAdminController::class, 'index'])->name('activity-log');
+    Route::get('/activity-log/export', [App\Http\Controllers\Admin\ActivityLogAdminController::class, 'export'])->name('activity-log.export');
 });

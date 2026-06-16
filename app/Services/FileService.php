@@ -15,16 +15,26 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 class FileService
 {
     protected SecurityService $security;
+    protected FileValidationService $fileValidator;
+    protected FileEncryptionService $encryption;
 
     public function __construct(SecurityService $security)
     {
         $this->security = $security;
+        $this->fileValidator = new FileValidationService();
+        $this->encryption = new FileEncryptionService();
     }
 
     public function upload(User $user, UploadedFile $uploadedFile, ?int $folderId = null): File
     {
         if (!$this->security->validateFileExtension($uploadedFile->getClientOriginalName())) {
             throw new \RuntimeException('File type not allowed.');
+        }
+
+        // Validate MIME type using content analysis (finfo)
+        if (!$this->fileValidator->validateMimeType($uploadedFile)) {
+            $actualMime = $this->fileValidator->detectMimeType($uploadedFile->getRealPath());
+            throw new \RuntimeException("File content type '{$actualMime}' does not match allowed types.");
         }
 
         if ($uploadedFile->getSize() > config('security.max_upload_size', 52428800)) {
@@ -46,6 +56,13 @@ class FileService
         $path = $uploadedFile->storeAs($relativePath, $storedName, 'private');
 
         $checksum = hash_file('sha256', $uploadedFile->getRealPath());
+
+        // Encrypt file at rest using per-user encryption key (AES-256-GCM)
+        $userKey = $this->encryption->getUserKey($user);
+        $this->encryption->encryptFile(
+            Storage::disk('private')->path($path),
+            $userKey
+        );
 
         $file = File::create([
             'user_id' => $user->id,
@@ -80,6 +97,36 @@ class FileService
             throw new \RuntimeException('File not found on storage.');
         }
 
+        // Verify file integrity via checksum
+        $fullPath = Storage::disk('private')->path($filePath);
+
+        // Decrypt file for download using per-user encryption key
+        $userKey = $this->encryption->getUserKey($user);
+        try {
+            $decryptedPath = $this->encryption->decryptFileToTemp($fullPath, $userKey);
+        } catch (\RuntimeException $e) {
+            ActivityLog::log($user->id, 'decryption_failed', request()->ip(), request()->userAgent(), [
+                'file_uuid' => $file->uuid,
+                'error' => $e->getMessage(),
+            ]);
+            throw new \RuntimeException('File decryption failed. Please contact support.');
+        }
+
+        // Verify checksum on decrypted content
+        if ($file->checksum_sha256) {
+            $decryptedChecksum = hash_file('sha256', $decryptedPath);
+            if (!hash_equals($file->checksum_sha256, $decryptedChecksum)) {
+                unlink($decryptedPath);
+                ActivityLog::log($user->id, 'checksum_mismatch', request()->ip(), request()->userAgent(), [
+                    'file_uuid' => $file->uuid,
+                    'original_name' => $file->original_name,
+                    'expected_checksum' => $file->checksum_sha256,
+                    'actual_checksum' => $decryptedChecksum,
+                ]);
+                throw new \RuntimeException('File integrity check failed. Please contact support.');
+            }
+        }
+
         $file->increment('download_count');
 
         ActivityLog::log($user->id, 'download', request()->ip(), request()->userAgent(), [
@@ -88,7 +135,7 @@ class FileService
         ]);
 
         return [
-            'path' => Storage::disk('private')->path($filePath),
+            'path' => $decryptedPath,
             'name' => $file->original_name,
             'mime' => $file->mime_type,
         ];

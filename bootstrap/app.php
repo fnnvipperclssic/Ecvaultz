@@ -39,6 +39,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified' => EnsureEmailIsVerified::class,
             '2fa' => RequireTwoFactor::class,
             'inertia' => HandleInertiaRequests::class,
+            'permission' => \App\Http\Middleware\CheckPermission::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
         ]);
 
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', '127.0.0.1,::1'));
@@ -53,6 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function ($schedule) {
         $schedule->command('ecvaultz:cleanup-expired-files')->dailyAt('02:00');
         $schedule->command('ecvaultz:cleanup-expired-shares')->hourly();
+        $schedule->command('ecvaultz:cleanup-activity-logs --days=90')->dailyAt('03:00');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->dontReport([]);

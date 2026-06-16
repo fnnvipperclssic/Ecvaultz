@@ -24,7 +24,9 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     'two_factor_enabled' => $request->user()->two_factor_enabled,
                     'email_verified' => $request->user()->hasVerifiedEmail(),
-                    'is_admin' => $request->user()->is_admin,
+                    'is_admin' => $request->user()->hasRole('Admin'),
+                    'roles' => $request->user()->getRoleNames(),
+                    'permissions' => $request->user()->getAllPermissions()->pluck('name'),
                     'avatar_url' => $request->user()->avatar_path
                         ? route('secure.avatar', ['user' => $request->user()->id])
                         : null,

@@ -64,6 +64,11 @@ class File extends Model
         return $this->hasMany(FileShare::class);
     }
 
+    public function versions(): HasMany
+    {
+        return $this->hasMany(FileVersion::class)->orderBy('version_number', 'desc');
+    }
+
     public function isOwnedBy(User $user): bool
     {
         return $this->user_id === $user->id;

@@ -1,69 +1,77 @@
-FROM php:8.3-cli-alpine
+# Ecvaultz - Multi-stage Docker build
+# Stage 1: Build frontend assets
+FROM node:20-alpine AS frontend
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY vite.config.js tailwind.config.js postcss.config.js ./
+COPY resources/css ./resources/css
+COPY resources/js ./resources/js
+COPY resources/views ./resources/views
+COPY public ./public
+RUN npm run build
+
+# Stage 2: Production PHP application
+FROM php:8.2-fpm-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
-    mariadb-client \
+    nginx \
+    supervisor \
     libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    zip \
-    unzip \
-    git \
-    curl \
     libzip-dev \
     oniguruma-dev \
-    icu-dev \
     libxml2-dev \
-    nodejs \
-    npm \
-    supervisor \
+    sqlite-dev \
+    mariadb-client \
     redis \
-    autoconf \
-    build-base \
-    pkgconf
-
-# Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install -j$(nproc) \
+    clamav \
+    clamav-daemon \
+    && docker-php-ext-install \
     pdo_mysql \
-    mysqli \
+    pdo_sqlite \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
     gd \
     zip \
-    exif \
-    bcmath \
     intl \
-    opcache \
-    mbstring
+    opcache
 
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Configure PHP
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY docker/php/opcache.ini "$PHP_INI_DIR/conf.d/opcache.ini"
 
-# Set working directory
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
 WORKDIR /var/www
 
-# Dev PHP config
-RUN cp "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
-RUN echo "upload_max_filesize = 52M" >> "$PHP_INI_DIR/php.ini"
-RUN echo "post_max_size = 52M" >> "$PHP_INI_DIR/php.ini"
+# Copy application code
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --prefer-dist
 
-EXPOSE 8000
+COPY . .
+RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 
-# Create storage directories and set permissions
-RUN mkdir -p storage/framework/cache/data \
-    storage/framework/sessions \
-    storage/framework/views \
-    storage/framework/testing \
-    storage/logs \
-    storage/app/private \
-    storage/app/public \
-    bootstrap/cache
+# Copy built frontend assets from stage 1
+COPY --from=frontend /app/public/build ./public/build
 
-# Startup script
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Set permissions
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["sh", "-c", "composer install --no-interaction && (php artisan key:generate --show 2>/dev/null || php artisan key:generate --force) && php artisan storage:link --force && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
+# Configure Nginx
+COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+
+# Configure Supervisor
+COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
+
+EXPOSE 80
+
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]

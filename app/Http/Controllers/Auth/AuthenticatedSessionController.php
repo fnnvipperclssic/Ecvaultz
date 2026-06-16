@@ -33,6 +33,11 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $user = Auth::user();
+
+        // Record successful login
+        $authService = app(\App\Services\AuthenticationService::class);
+        $authService->recordSuccessfulAttempt($user, $request->ip(), $request->userAgent());
+
         $user->update([
             'last_login_at' => now(),
             'last_login_ip' => $request->ip(),
@@ -41,7 +46,12 @@ class AuthenticatedSessionController extends Controller
         ActivityLog::log($user->id, 'login', $request->ip(), $request->userAgent());
 
         // Check for IP anomaly
-        $this->security->detectSessionAnomaly($request, $user);
+        $ipChanged = $authService->detectIpAnomaly($user, $request->ip());
+        if ($ipChanged) {
+            ActivityLog::log($user->id, 'new_device_login', $request->ip(), $request->userAgent(), [
+                'previous_ip' => $user->last_login_ip,
+            ]);
+        }
 
         // If user has 2FA enabled, redirect to challenge instead of dashboard
         if ($user->hasTwoFactorEnabled()) {

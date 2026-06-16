@@ -20,6 +20,7 @@ return [
         'require_uppercase' => (bool) env('PASSWORD_REQUIRE_UPPERCASE', true),
         'require_numeric' => (bool) env('PASSWORD_REQUIRE_NUMERIC', true),
         'require_symbol' => (bool) env('PASSWORD_REQUIRE_SYMBOL', true),
+        'expiry_days' => (int) env('PASSWORD_EXPIRY_DAYS', 90),
     ],
     'soft_delete_retention_days' => (int) env('SOFT_DELETE_RETENTION_DAYS', 30),
     'max_bulk_delete' => (int) env('MAX_BULK_DELETE', 100),
@@ -40,5 +41,9 @@ return [
     ],
     'cache' => [
         'ttl_files' => (int) env('CACHE_TTL_FILES', 300),
+    ],
+    'lockout' => [
+        'threshold' => (int) env('ACCOUNT_LOCKOUT_THRESHOLD', 5),
+        'minutes' => (int) env('ACCOUNT_LOCKOUT_MINUTES', 15),
     ],
 ];

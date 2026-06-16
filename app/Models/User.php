@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable, SoftDeletes;
+    use HasApiTokens, Notifiable, SoftDeletes, HasRoles;
 
     protected $fillable = [
         'name',
@@ -24,6 +25,7 @@ class User extends Authenticatable
         'last_login_at',
         'last_login_ip',
         'password_changed_at',
+        'encryption_key',
         'is_admin',
     ];
 
@@ -32,6 +34,7 @@ class User extends Authenticatable
         'remember_token',
         'google2fa_secret',
         'recovery_codes',
+        'encryption_key',
     ];
 
     protected $casts = [
@@ -68,6 +71,56 @@ class User extends Authenticatable
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class);
+    }
+
+    public function securityQuestions(): HasMany
+    {
+        return $this->hasMany(SecurityQuestion::class);
+    }
+
+    public function loginAttempts(): HasMany
+    {
+        return $this->hasMany(LoginAttempt::class);
+    }
+
+    public function fileVersions(): HasMany
+    {
+        return $this->hasMany(FileVersion::class);
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'notifiable_id')->where('notifiable_type', self::class);
+    }
+
+    public function settings(): HasMany
+    {
+        return $this->hasMany(UserSetting::class);
+    }
+
+    public function setting(string $key, mixed $default = null): mixed
+    {
+        return UserSetting::get($this, $key, $default);
+    }
+
+    public function setSetting(string $key, mixed $value): void
+    {
+        UserSetting::set($this, $key, $value);
+    }
+
+    public function getAllSettings(): array
+    {
+        return UserSetting::getAll($this);
+    }
+
+    public function unreadNotifications(): HasMany
+    {
+        return $this->notifications()->whereNull('read_at');
+    }
+
+    public function unreadNotificationsCount(): int
+    {
+        return $this->unreadNotifications()->count();
     }
 
     public function isAdmin(): bool

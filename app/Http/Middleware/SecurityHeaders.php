@@ -36,11 +36,10 @@ class SecurityHeaders
     {
         $csp = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net",
             "img-src 'self' data: blob:",
             "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net",
-            "connect-src 'self' ws://localhost:5173",
+            "connect-src 'self' ws://localhost:5173 http://localhost:5173",
             "frame-src 'none'",
             "object-src 'none'",
             "base-uri 'self'",
@@ -48,8 +47,12 @@ class SecurityHeaders
             "frame-ancestors 'none'",
         ];
 
-        // Only force HTTPS upgrade in production
-        if (app()->environment('production')) {
+        // For development, allow unsafe-inline and unsafe-eval (needed for Vite HMR)
+        if (app()->environment('local', 'testing')) {
+            $csp[] = "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+        } else {
+            // Production: stricter CSP without unsafe-eval
+            $csp[] = "script-src 'self' 'unsafe-inline'";
             $csp[] = "upgrade-insecure-requests";
         }
 
