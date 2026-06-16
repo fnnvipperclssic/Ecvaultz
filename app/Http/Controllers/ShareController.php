@@ -227,7 +227,7 @@ class ShareController extends Controller
             'fileName' => $share->file->original_name,
             'fileSize' => $share->file->getSizeForHumans(),
             'sharedBy' => $share->sharedBy->name,
-            'downloadUrl' => route('share.download', ['token' => $share->share_link_token]),
+            'downloadUrl' => route('share.download', ['token' => $token]),
             'expiresAt' => $share->expires_at?->diffForHumans(),
         ]);
     }

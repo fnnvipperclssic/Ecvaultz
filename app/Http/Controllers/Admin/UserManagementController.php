@@ -15,7 +15,7 @@ class UserManagementController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = User::with('roles');
+        $query = User::withTrashed()->with('roles');
 
         if ($request->has('search')) {
             $query->where(function ($q) use ($request) {

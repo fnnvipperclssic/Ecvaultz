@@ -1,29 +1,64 @@
+# Dependencies
 /vendor
 /node_modules
+
+# Build artifacts
 /public/build
 /public/storage
+/public/hot
+
+# Environment files
+.env
+.env.backup
+.env.local
+.env.production
+
+# SQLite databases
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Storage
 /storage/*.key
 /storage/logs/*.log
 /storage/framework/cache/*
 /storage/framework/sessions/*
 /storage/framework/testing/*
 /storage/framework/views/*
-.env
-.env.backup
-.env.local
+/storage/app/private/*
+/storage/app/public/*
+!storage/app/private/.gitkeep
+!storage/app/public/.gitkeep
+
+# Cache & temp
 .phpunit.result.cache
 .php-cs-fixer.cache
+/.phpunit.cache
+/tests/coverage
+
+# Lock files (use composer install / npm ci)
 composer.lock
 package-lock.json
+
+# OS files
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 *.bak
 ~*
+
+# IDE
 .idea
 .vscode
 *.sublime-*
 *.code-workspace
-/tests/coverage
-/.phpunit.cache
+
+# Project analysis (local only)
+analisis-project.md
+
+# Backup files
+docker-entrypoint.sh
+nginx.conf
+*.txt.backup
