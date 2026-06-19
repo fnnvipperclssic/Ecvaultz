@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * Web Routes — Ecvaultz
+ *
+ * Route groups (in order of middleware stack):
+ *   1. Public (no auth)          — Landing, share-link access, security-question verify
+ *   2. Guest                     — Login, register, forgot/reset password, 2FA challenge
+ *   3. Auth only                 — Email verification
+ *   4. Auth + Verified           — 2FA setup, security questions, profile, logout
+ *   5. Auth + Verified + 2FA     — Main app: dashboard, files, folders, shares, activity
+ *   6. Auth + Verified + 2FA + Permission — Admin panel
+ *
+ * All state-changing routes use POST/PATCH/DELETE. No CSRF exceptions.
+ */
+
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\FolderController;
@@ -16,12 +30,20 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
-// Landing page (public)
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
 Route::get('/', function () {
     return Inertia::render('Landing');
 })->name('landing');
 
-// Guest routes
+/*
+|--------------------------------------------------------------------------
+| Guest Routes (unauthenticated only)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
@@ -33,31 +55,51 @@ Route::middleware('guest')->group(function () {
     Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.update');
 });
 
-// 2FA challenge routes (separate from full auth, with rate limiting)
+/*
+|--------------------------------------------------------------------------
+| 2FA Challenge (guest middleware — user logged out pending TOTP verification)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['guest', 'throttle:2fa'])->group(function () {
     Route::get('2fa/challenge', [TwoFactorController::class, 'showChallenge'])->name('2fa.challenge');
     Route::post('2fa/challenge', [TwoFactorController::class, 'verifyChallenge']);
 });
 
-// Public share access routes
+/*
+|--------------------------------------------------------------------------
+| Public Share Link Access (no auth required)
+|--------------------------------------------------------------------------
+*/
 Route::get('share/{token}', [ShareController::class, 'accessViaLink'])->name('share.access');
 Route::post('share/{token}', [ShareController::class, 'accessViaLink']);
 Route::get('share/{token}/download', [ShareController::class, 'downloadViaLink'])->name('share.download');
 
-// Security questions verification (public, during password reset)
+/*
+|--------------------------------------------------------------------------
+| Security Questions (public — password reset verification)
+|--------------------------------------------------------------------------
+*/
 Route::get('password/security-questions', [App\Http\Controllers\Auth\SecurityQuestionController::class, 'showVerify'])
     ->name('password.security-questions');
 Route::post('security-questions/verify', [App\Http\Controllers\Auth\SecurityQuestionController::class, 'verify'])
     ->name('security-questions.verify');
 
-// Email verification routes (must be authenticated but NOT email-verified)
+/*
+|--------------------------------------------------------------------------
+| Email Verification (auth required, not yet verified)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->group(function () {
     Route::get('email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::get('email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])->name('verification.verify');
     Route::post('email/verification-notification', [EmailVerificationController::class, 'resend'])->name('verification.send');
 });
 
-// Authenticated + Verified Email routes
+/*
+|--------------------------------------------------------------------------
+| Auth + Verified (must be logged in with confirmed email)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth', 'verified'])->group(function () {
     // 2FA setup (must be authenticated but not yet 2FA verified)
     Route::get('2fa/setup', [TwoFactorController::class, 'setup'])->name('2fa.setup');
@@ -84,7 +126,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
 
-// Main application routes (authenticated + 2FA verified + password expiry check)
+/*
+|--------------------------------------------------------------------------
+| Main Application (auth + verified + 2FA + password expiry check)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPasswordExpiry::class])->group(function () {
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -134,7 +180,11 @@ Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPassword
     })->name('secure.avatar');
 });
 
-// Admin routes (auth + 2FA + permission:admin.access)
+/*
+|--------------------------------------------------------------------------
+| Admin Panel (auth + 2FA + admin.access permission required)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth', 'verified', '2fa', 'permission:admin.access'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/users', [App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('users.index');

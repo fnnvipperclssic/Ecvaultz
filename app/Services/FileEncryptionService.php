@@ -5,15 +5,24 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
 
+/**
+ * Handles AES-256-GCM encryption and decryption of user files.
+ *
+ * Each user gets a unique 256-bit key generated at registration,
+ * stored in the database encrypted with the application's master key (APP_KEY).
+ * Files are encrypted on upload and decrypted on-the-fly during download.
+ *
+ * The encrypted file format is: [12-byte IV] + [16-byte auth tag] + [ciphertext]
+ */
 class FileEncryptionService
 {
-    private const CIPHER = 'aes-256-gcm';
-    private const IV_LENGTH = 12; // 96 bits for GCM
-    private const TAG_LENGTH = 16; // 128 bits auth tag
-    private const KEY_LENGTH = 32; // 256 bits
+    private const CIPHER    = 'aes-256-gcm';
+    private const IV_LENGTH  = 12;  // GCM standard nonce size
+    private const TAG_LENGTH = 16;  // 128-bit authentication tag
+    private const KEY_LENGTH = 32;  // 256-bit symmetric key
 
     /**
-     * Generate a new encryption key for a user.
+     * Generate a fresh 256-bit key encoded as base64 for storage.
      */
     public function generateUserKey(): string
     {
@@ -21,8 +30,8 @@ class FileEncryptionService
     }
 
     /**
-     * Get the decrypted encryption key for a user.
-     * If user doesn't have one, generate and store it.
+     * Retrieve a user's decrypted encryption key. If they don't have one yet
+     * (e.g. legacy users), generate and persist a new one on the fly.
      */
     public function getUserKey(User $user): string
     {
@@ -37,35 +46,28 @@ class FileEncryptionService
     }
 
     /**
-     * Encrypt file content using AES-256-GCM.
-     * Returns encrypted content with IV + tag prepended.
+     * Encrypt raw content with a given key. Returns the binary blob
+     * [IV || TAG || CIPHERTEXT] that gets written to disk.
      */
     public function encrypt(string $plaintext, string $key): string
     {
-        $iv = random_bytes(self::IV_LENGTH);
+        $iv  = random_bytes(self::IV_LENGTH);
         $tag = '';
 
         $ciphertext = openssl_encrypt(
-            $plaintext,
-            self::CIPHER,
-            $key,
-            OPENSSL_RAW_DATA,
-            $iv,
-            $tag,
-            '',
-            self::TAG_LENGTH
+            $plaintext, self::CIPHER, $key,
+            OPENSSL_RAW_DATA, $iv, $tag, '', self::TAG_LENGTH
         );
 
         if ($ciphertext === false) {
             throw new \RuntimeException('File encryption failed: ' . openssl_error_string());
         }
 
-        // Format: IV (12 bytes) + TAG (16 bytes) + CIPHERTEXT
         return $iv . $tag . $ciphertext;
     }
 
     /**
-     * Decrypt file content.
+     * Reverse an encrypt() call — extracts IV, tag, and ciphertext, then decrypts.
      */
     public function decrypt(string $encryptedData, string $key): string
     {
@@ -73,17 +75,13 @@ class FileEncryptionService
             throw new \RuntimeException('Invalid encrypted data: too short.');
         }
 
-        $iv = substr($encryptedData, 0, self::IV_LENGTH);
-        $tag = substr($encryptedData, self::IV_LENGTH, self::TAG_LENGTH);
+        $iv         = substr($encryptedData, 0, self::IV_LENGTH);
+        $tag        = substr($encryptedData, self::IV_LENGTH, self::TAG_LENGTH);
         $ciphertext = substr($encryptedData, self::IV_LENGTH + self::TAG_LENGTH);
 
         $plaintext = openssl_decrypt(
-            $ciphertext,
-            self::CIPHER,
-            $key,
-            OPENSSL_RAW_DATA,
-            $iv,
-            $tag
+            $ciphertext, self::CIPHER, $key,
+            OPENSSL_RAW_DATA, $iv, $tag
         );
 
         if ($plaintext === false) {
@@ -94,8 +92,8 @@ class FileEncryptionService
     }
 
     /**
-     * Encrypt a file on disk and replace it.
-     * Returns the new file path (same path, encrypted content).
+     * Read a file from disk, encrypt its contents in-place.
+     * The file at $filePath is overwritten with the encrypted blob.
      */
     public function encryptFile(string $filePath, string $key): void
     {
@@ -109,8 +107,8 @@ class FileEncryptionService
     }
 
     /**
-     * Decrypt a file and return its plaintext content.
-     * For large files, use decryptFileStream instead.
+     * Decrypt a file from disk and return the plaintext as a string.
+     * Best for smaller files; for large payloads use decryptFileToTemp() instead.
      */
     public function decryptFile(string $filePath, string $key): string
     {
@@ -118,17 +116,19 @@ class FileEncryptionService
             throw new \RuntimeException('File not found for decryption: ' . $filePath);
         }
 
-        $encryptedData = file_get_contents($filePath);
-        return $this->decrypt($encryptedData, $key);
+        return $this->decrypt(file_get_contents($filePath), $key);
     }
 
     /**
-     * Stream-decrypt a file and return a temporary path to the decrypted content.
+     * Decrypt the file to a temporary location so it can be streamed to the
+     * browser without holding the entire plaintext in memory.
+     *
+     * Caller is responsible for cleaning up the temp file after use.
      */
     public function decryptFileToTemp(string $filePath, string $key): string
     {
         $decrypted = $this->decryptFile($filePath, $key);
-        $tempPath = tempnam(sys_get_temp_dir(), 'ecvaultz_dec_');
+        $tempPath  = tempnam(sys_get_temp_dir(), 'ecvaultz_dec_');
         file_put_contents($tempPath, $decrypted);
         return $tempPath;
     }

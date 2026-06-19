@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Laravel 11 Application Bootstrap
+ *
+ * Configures the application lifecycle:
+ *   - Routing (web + api)
+ *   - Middleware stack (CSRF, CORS, security headers, Inertia, 2FA)
+ *   - Scheduled tasks (cleanup commands)
+ *   - Exception handling
+ */
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;

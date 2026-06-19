@@ -14,6 +14,14 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Primary file management controller.
+ *
+ * Covers the full file lifecycle: upload (with encryption + virus scanning),
+ * download (with on-the-fly decryption + integrity check), preview, rename,
+ * move between folders, soft-delete/restore, permanent delete, and bulk operations.
+ * All destructive actions require password confirmation or Gate authorization.
+ */
 class FileController extends Controller
 {
     protected FileService $fileService;

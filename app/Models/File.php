@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
+/**
+ * Represents an uploaded file stored on the private disk.
+ *
+ * Files are encrypted at rest with AES-256-GCM using a per-user encryption key.
+ * Public identifiers use UUIDs to prevent enumeration attacks.
+ * Soft-deleted files remain recoverable for 30 days (configurable).
+ */
 class File extends Model
 {
     use SoftDeletes;

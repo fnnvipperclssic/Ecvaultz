@@ -6,6 +6,14 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Enforces Two-Factor Authentication for routes in the '2fa' middleware group.
+ *
+ * If the user has 2FA enabled, they must have a valid '2fa.verified' session flag.
+ * Supports idle timeout — if the 2FA session sits idle beyond the configured limit,
+ * the user is redirected back to the challenge page. Also handles global 2FA
+ * requirement (forces users without 2FA to set it up).
+ */
 class RequireTwoFactor
 {
     public function handle(Request $request, Closure $next): Response

@@ -9,6 +9,12 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * Central user model with Spatie RBAC, 2FA, API tokens, and per-user file encryption.
+ *
+ * Sensitive fields (google2fa_secret, recovery_codes, encryption_key) are either
+ * encrypted via Laravel's encrypted casting or hidden from JSON serialization.
+ */
 class User extends Authenticatable
 {
     use HasApiTokens, Notifiable, SoftDeletes, HasRoles;

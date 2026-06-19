@@ -8,10 +8,18 @@ use App\Models\ActivityLog;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
+/**
+ * Core file operations: upload, download, soft-delete, permanent delete, and bulk actions.
+ *
+ * Upload pipeline: extension check → MIME validation (finfo) → ClamAV scan (if enabled)
+ * → store to private disk → SHA-256 checksum → AES-256-GCM encrypt at rest → DB record.
+ *
+ * Download pipeline: locate encrypted file → decrypt to temp → verify SHA-256 checksum
+ * → stream to browser. Temp file cleaned up after response is sent.
+ */
 class FileService
 {
     protected SecurityService $security;

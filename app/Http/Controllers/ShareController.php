@@ -14,6 +14,14 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Manages file sharing between users (internal) and via public links (external).
+ *
+ * Internal shares link two registered users with read or write permission.
+ * External shares generate a 64-char token stored as SHA-256 hash in the DB;
+ * the raw token is only shown once at creation. External links can be password-
+ * protected and set to expire after a configurable number of hours.
+ */
 class ShareController extends Controller
 {
     public function index(Request $request): Response

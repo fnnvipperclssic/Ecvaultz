@@ -6,6 +6,13 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Injects security-related HTTP headers on every web response.
+ *
+ * Covers: CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy,
+ * Permissions-Policy, and Cross-Origin isolation policies.
+ * CSP allows unsafe-inline/unsafe-eval in local/dev for Vite HMR; tightened in production.
+ */
 class SecurityHeaders
 {
     public function handle(Request $request, Closure $next): Response
