@@ -4,6 +4,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { SnackbarProvider } from 'notistack';
 import ErrorBoundary from '@/Components/ErrorBoundary';
+import { ThemeProvider } from '@/Hooks/ThemeContext';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Ecvaultz';
 
@@ -17,14 +18,16 @@ createInertiaApp({
         const root = createRoot(el);
         root.render(
             <ErrorBoundary>
-                <SnackbarProvider
-                    maxSnack={4}
-                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                    autoHideDuration={4000}
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                >
-                    <App {...props} />
-                </SnackbarProvider>
+                <ThemeProvider>
+                    <SnackbarProvider
+                        maxSnack={4}
+                        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                        autoHideDuration={4000}
+                        style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                    >
+                        <App {...props} />
+                    </SnackbarProvider>
+                </ThemeProvider>
             </ErrorBoundary>
         );
     },

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from '@inertiajs/react';
 import ParticleBackground from '@/Components/ParticleBackground';
+import ThemeToggle from '@/Components/ThemeToggle';
 
 /* ══════════════════════════════════════════════
    ECVAULTZ LANDING — Premium Immersive Design
@@ -25,7 +26,8 @@ function Navbar({ scrolled }) {
                         <a href="#features" className={`text-sm font-medium transition-colors ${scrolled ? 'text-surface-500 hover:text-surface-800' : 'text-surface-400 hover:text-white'}`}>Features</a>
                         <a href="#how" className={`text-sm font-medium transition-colors ${scrolled ? 'text-surface-500 hover:text-surface-800' : 'text-surface-400 hover:text-white'}`}>How It Works</a>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                        <ThemeToggle />
                         <Link href="/login" className={`text-sm font-medium px-4 py-2 rounded-xl transition-all ${scrolled ? 'text-surface-500 hover:text-surface-800 hover:bg-surface-200' : 'text-surface-400 hover:text-white hover:bg-white/5'}`}>Sign in</Link>
                         <Link href="/register" className="text-sm font-semibold px-5 py-2.5 rounded-xl bg-primary-600 text-white hover:bg-primary-500 transition-all duration-300 shadow-glow-sm hover:shadow-glow active:scale-[0.97]">Get Started</Link>
                     </div>
