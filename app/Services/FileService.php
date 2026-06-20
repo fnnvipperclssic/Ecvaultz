@@ -62,8 +62,12 @@ class FileService
         }
 
         $path = $uploadedFile->storeAs($relativePath, $storedName, 'private');
+        $storedFullPath = Storage::disk('private')->path($path);
 
-        $checksum = hash_file('sha256', $uploadedFile->getRealPath());
+        // Strip EXIF/metadata from images for privacy
+        $this->stripExif($storedFullPath, $uploadedFile->getMimeType());
+
+        $checksum = hash_file('sha256', $storedFullPath);
 
         // Encrypt file at rest using per-user encryption key (AES-256-GCM)
         $userKey = $this->encryption->getUserKey($user);
@@ -231,6 +235,44 @@ class FileService
         }
 
         return $count;
+    }
+
+    /**
+     * Strip EXIF metadata from JPEG/PNG/TIFF images for privacy.
+     * Only processes image MIME types; other files are left untouched.
+     */
+    protected function stripExif(string $filePath, string $mimeType): void
+    {
+        $imageTypes = ['image/jpeg', 'image/png', 'image/tiff', 'image/webp'];
+        if (!in_array($mimeType, $imageTypes) || !extension_loaded('gd')) {
+            return;
+        }
+
+        try {
+            $img = match ($mimeType) {
+                'image/jpeg' => imagecreatefromjpeg($filePath),
+                'image/png'  => imagecreatefrompng($filePath),
+                'image/webp' => imagecreatefromwebp($filePath),
+                default      => null,
+            };
+
+            if (!$img) return;
+
+            // Re-save without EXIF by creating a fresh image
+            match ($mimeType) {
+                'image/jpeg' => imagejpeg($img, $filePath, 92),
+                'image/png'  => imagepng($img, $filePath, 8),
+                'image/webp' => imagewebp($img, $filePath, 85),
+                default      => null,
+            };
+
+            imagedestroy($img);
+        } catch (\Throwable $e) {
+            Log::warning('EXIF stripping failed, continuing with original file', [
+                'path' => $filePath,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     protected function scanWithClamAV(string $filePath): void

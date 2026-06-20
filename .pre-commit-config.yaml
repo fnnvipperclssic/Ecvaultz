@@ -1,0 +1,52 @@
+# Pre-commit hooks for Ecvaultz
+# Install: brew install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  - repo: local
+    hooks:
+      - id: laravel-pint
+        name: Laravel Pint (PHP CS)
+        entry: ./vendor/bin/pint --test
+        language: system
+        files: \.php$
+        pass_filenames: true
+
+      - id: phpstan
+        name: PHPStan Analysis
+        entry: ./vendor/bin/phpstan analyse --level=5
+        language: system
+        files: \.php$
+        pass_filenames: false
+
+      - id: eslint
+        name: ESLint (JS)
+        entry: npx eslint
+        language: system
+        files: \.(js|jsx)$
+        pass_filenames: true
+
+      - id: composer-audit
+        name: Composer Audit
+        entry: composer audit
+        language: system
+        files: composer\.(json|lock)$
+        pass_filenames: false
+
+      - id: npm-audit
+        name: npm Audit
+        entry: npm audit --audit-level=high
+        language: system
+        files: package\.(json|lock)$
+        pass_filenames: false

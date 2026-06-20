@@ -147,4 +147,84 @@
             linear-gradient(90deg, rgba(139,69,255,0.03) 1px, transparent 1px);
         background-size: 60px 60px;
     }
+
+    /* === Animated Border (glowing gradient border on hover) === */
+    .border-glow {
+        position: relative;
+    }
+    .border-glow::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(135deg, rgba(139,69,255,0.3), rgba(0,212,255,0.3), rgba(139,69,255,0.1));
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+    .border-glow:hover::before {
+        opacity: 1;
+    }
+
+    /* === Number counter animation === */
+    @property --num {
+        syntax: '<integer>';
+        initial-value: 0;
+        inherits: false;
+    }
+    .counter {
+        animation: counter 2s ease-out forwards;
+    }
+    @keyframes counter {
+        from { --num: 0; }
+        to { --num: var(--target); }
+    }
+
+    /* === Slide-in on scroll (used with Intersection Observer) === */
+    .reveal {
+        opacity: 0;
+        transform: translateY(24px);
+        transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+    .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    /* === Subtle noise texture for depth === */
+    .noise::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        opacity: 0.015;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+        background-size: 128px 128px;
+        pointer-events: none;
+    }
+
+    /* === Gradient border card (permanent, not just hover) === */
+    .card-accent {
+        @apply card;
+        border: 1px solid transparent;
+        background-clip: padding-box;
+    }
+    .card-accent::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(135deg, rgba(139,69,255,0.15), transparent 50%, rgba(0,212,255,0.1));
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+    }
 }

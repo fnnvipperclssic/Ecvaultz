@@ -1,0 +1,7 @@
+Contact: mailto:security@ecvaultz.test
+Expires: 2027-06-19T00:00:00.000Z
+Encryption: https://ecvaultz.test/.well-known/pgp-key.txt
+Acknowledgments: https://ecvaultz.test/security/hall-of-fame
+Policy: https://ecvaultz.test/security/policy
+Preferred-Languages: en, id
+Canonical: https://ecvaultz.test/.well-known/security.txt

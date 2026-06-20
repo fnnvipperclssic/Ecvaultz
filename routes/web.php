@@ -152,6 +152,7 @@ Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPassword
     Route::post('folders', [FolderController::class, 'store'])->name('folders.store');
     Route::patch('folders/{uuid}', [FolderController::class, 'update'])->name('folders.update');
     Route::delete('folders/{uuid}', [FolderController::class, 'destroy'])->name('folders.destroy');
+    Route::get('api/folders/tree', [FolderController::class, 'tree'])->name('folders.tree');
 
     // Sharing
     Route::get('shares', [ShareController::class, 'index'])->name('shares.index');

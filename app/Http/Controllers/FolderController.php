@@ -53,6 +53,30 @@ class FolderController extends Controller
         return back()->with('success', 'Folder renamed.');
     }
 
+    /**
+     * Return folder tree structure as JSON for the sidebar tree view.
+     */
+    public function tree(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $folders = Folder::where('user_id', $request->user()->id)
+            ->with('children')
+            ->whereNull('parent_id')
+            ->get()
+            ->map(fn ($f) => $this->formatFolderNode($f));
+
+        return response()->json(['folders' => $folders]);
+    }
+
+    protected function formatFolderNode(Folder $folder): array
+    {
+        return [
+            'uuid' => $folder->uuid,
+            'name' => $folder->name,
+            'file_count' => $folder->files()->count(),
+            'children' => $folder->children->map(fn ($child) => $this->formatFolderNode($child))->toArray(),
+        ];
+    }
+
     public function destroy(Request $request, string $uuid): RedirectResponse
     {
         $folder = Folder::where('uuid', $uuid)->firstOrFail();
