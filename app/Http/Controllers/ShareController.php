@@ -262,12 +262,21 @@ class ShareController extends Controller
             abort(404);
         }
 
+        // Decrypt the file for download
+        $encryptionService = app(\App\Services\FileEncryptionService::class);
+        $userKey = $encryptionService->getUserKey($file->user);
+        try {
+            $decryptedPath = $encryptionService->decryptFileToTemp($filePath, $userKey);
+        } catch (\RuntimeException $e) {
+            abort(500, 'File decryption failed.');
+        }
+
         $file->increment('download_count');
         $share->recordAccess();
 
-        return response()->download($filePath, $file->original_name, [
+        return response()->download($decryptedPath, $file->original_name, [
             'Content-Type' => $file->mime_type,
             'X-Content-Type-Options' => 'nosniff',
-        ]);
+        ])->deleteFileAfterSend(true);
     }
 }

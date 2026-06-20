@@ -112,6 +112,14 @@ class FileService
         // Verify file integrity via checksum
         $fullPath = Storage::disk('private')->path($filePath);
 
+        // Path traversal protection — ensure resolved path is within private storage
+        $realPath = realpath($fullPath);
+        $storageRoot = realpath(Storage::disk('private')->path(''));
+        if (!$realPath || !$storageRoot || !str_starts_with($realPath, $storageRoot)) {
+            ActivityLog::log($user->id, 'path_traversal_attempt', request()->ip(), request()->userAgent(), ['file_uuid' => $file->uuid]);
+            throw new \RuntimeException('File access denied: invalid path.');
+        }
+
         // Decrypt file for download using per-user encryption key
         $userKey = $this->encryption->getUserKey($user);
         try {

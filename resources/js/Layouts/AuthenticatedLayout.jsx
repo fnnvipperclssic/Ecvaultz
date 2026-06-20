@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { useSnackbar } from 'notistack';
+import CommandPalette from '@/Components/CommandPalette';
 
 export default function AuthenticatedLayout({ children, header }) {
     const { auth, flash } = usePage().props;
@@ -132,6 +133,7 @@ export default function AuthenticatedLayout({ children, header }) {
                     {children}
                 </main>
             </div>
+            <CommandPalette />
         </div>
     );
 }

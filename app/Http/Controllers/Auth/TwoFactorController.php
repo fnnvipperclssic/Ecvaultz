@@ -80,6 +80,12 @@ class TwoFactorController extends Controller
             return back()->withErrors(['password' => 'Incorrect password.']);
         }
 
+        // Require current TOTP code to disable 2FA
+        $request->validate(['two_factor_code' => ['required', 'string', 'size:6']]);
+        if (!$this->twoFactor->verify($user->google2fa_secret, $request->input('two_factor_code'))) {
+            return back()->withErrors(['two_factor_code' => 'Invalid verification code.']);
+        }
+
         $user->disableTwoFactor();
 
         ActivityLog::log($user->id, '2fa_disabled', $request->ip(), $request->userAgent());
@@ -156,6 +162,12 @@ class TwoFactorController extends Controller
 
         if (!Hash::check($request->input('password'), $user->password)) {
             return back()->withErrors(['password' => 'Incorrect password.']);
+        }
+
+        // Require current TOTP code to regenerate recovery codes
+        $request->validate(['two_factor_code' => ['required', 'string', 'size:6']]);
+        if (!$this->twoFactor->verify($user->google2fa_secret, $request->input('two_factor_code'))) {
+            return back()->withErrors(['two_factor_code' => 'Invalid verification code.']);
         }
 
         $recoveryCodes = $this->twoFactor->generateRecoveryCodes();

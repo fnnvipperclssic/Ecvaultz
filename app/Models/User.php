@@ -22,14 +22,17 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password',
-        'google2fa_secret',
-        'two_factor_enabled',
-        'recovery_codes',
         'avatar_path',
         'last_login_at',
         'last_login_ip',
         'password_changed_at',
+    ];
+
+    protected $guarded = [
+        'password',
+        'google2fa_secret',
+        'two_factor_enabled',
+        'recovery_codes',
         'encryption_key',
         'is_admin',
     ];

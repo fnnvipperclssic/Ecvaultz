@@ -41,14 +41,16 @@ class FileController extends Controller
             ->when($folderId, fn ($q) => $q->where('folder_id', $folderId))
             ->when(!$folderId, fn ($q) => $q->whereNull('folder_id'));
 
-        // Search
+        // Search (escape LIKE wildcards to prevent injection)
         if ($request->has('search')) {
-            $query->where('original_name', 'like', '%' . $request->search . '%');
+            $escaped = addcslashes($request->search, '%_');
+            $query->where('original_name', 'like', '%' . $escaped . '%');
         }
 
-        // Sort
-        $sort = $request->input('sort', 'uploaded_at');
-        $direction = $request->input('direction', 'desc');
+        // Sort (whitelist allowed columns to prevent SQL column injection)
+        $allowedSorts = ['original_name', 'size', 'mime_type', 'uploaded_at', 'download_count', 'created_at'];
+        $sort = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'uploaded_at';
+        $direction = in_array(strtolower($request->input('direction')), ['asc', 'desc']) ? $request->input('direction') : 'desc';
         $query->orderBy($sort, $direction);
 
         $files = $query->paginate(20)->through(fn (File $file) => [
@@ -127,7 +129,7 @@ class FileController extends Controller
             return response()->download($data['path'], $data['name'], [
                 'Content-Type' => $data['mime'],
                 'X-Content-Type-Options' => 'nosniff',
-            ]);
+            ])->deleteFileAfterSend(true);
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -146,7 +148,16 @@ class FileController extends Controller
         }
 
         $filePath = Storage::disk('private')->path($file->path);
-        $base64Content = base64_encode(file_get_contents($filePath));
+
+        // Decrypt file for preview
+        $encryptionService = app(\App\Services\FileEncryptionService::class);
+        $userKey = $encryptionService->getUserKey($request->user());
+        try {
+            $plaintext = $encryptionService->decryptFile($filePath, $userKey);
+            $base64Content = base64_encode($plaintext);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', 'File preview failed. Please download instead.');
+        }
 
         return Inertia::render('Files/Preview', [
             'file' => [
@@ -286,9 +297,15 @@ class FileController extends Controller
             'folder_id' => ['nullable', 'string', 'exists:folders,uuid'],
         ]);
 
-        $folderId = $request->folder_id
-            ? Folder::where('uuid', $request->folder_id)->firstOrFail()->id
-            : null;
+        $folderId = null;
+        if ($request->folder_id) {
+            $targetFolder = Folder::where('uuid', $request->folder_id)->firstOrFail();
+            // Verify target folder belongs to the user
+            if (!Gate::allows('view', $targetFolder)) {
+                abort(403, 'You do not have permission to move files to this folder.');
+            }
+            $folderId = $targetFolder->id;
+        }
 
         $file->folder_id = $folderId;
         $file->save();

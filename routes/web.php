@@ -70,9 +70,11 @@ Route::middleware(['guest', 'throttle:2fa'])->group(function () {
 | Public Share Link Access (no auth required)
 |--------------------------------------------------------------------------
 */
-Route::get('share/{token}', [ShareController::class, 'accessViaLink'])->name('share.access');
-Route::post('share/{token}', [ShareController::class, 'accessViaLink']);
-Route::get('share/{token}/download', [ShareController::class, 'downloadViaLink'])->name('share.download');
+Route::middleware('throttle:share-access')->group(function () {
+    Route::get('share/{token}', [ShareController::class, 'accessViaLink'])->name('share.access');
+    Route::post('share/{token}', [ShareController::class, 'accessViaLink']);
+    Route::get('share/{token}/download', [ShareController::class, 'downloadViaLink'])->name('share.download');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -82,7 +84,7 @@ Route::get('share/{token}/download', [ShareController::class, 'downloadViaLink']
 Route::get('password/security-questions', [App\Http\Controllers\Auth\SecurityQuestionController::class, 'showVerify'])
     ->name('password.security-questions');
 Route::post('security-questions/verify', [App\Http\Controllers\Auth\SecurityQuestionController::class, 'verify'])
-    ->name('security-questions.verify');
+    ->name('security-questions.verify')->middleware('throttle:security-question');
 
 /*
 |--------------------------------------------------------------------------

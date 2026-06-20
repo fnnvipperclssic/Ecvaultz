@@ -60,6 +60,15 @@ export default function Login() {
                     Don't have an account?{' '}
                     <Link href="/register" className="font-semibold text-primary-400 hover:text-primary-300 transition-colors">Create one</Link>
                 </p>
+
+                <div className="text-center pt-2">
+                    <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-surface-500 hover:text-surface-300 transition-colors">
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Home
+                    </Link>
+                </div>
             </form>
         </GuestLayout>
     );
