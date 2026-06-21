@@ -10,9 +10,10 @@
    Component Utilities | Effects & Polish
    ═══════════════════════════════════════════════════ */
 
-/* ── Design Tokens ── */
+/* ── Design Tokens + Surface Color System ── */
 @layer base {
     :root {
+        /* Brand tokens */
         --color-primary: #8b45ff;
         --color-primary-glow: rgba(139,69,255,0.2);
         --color-accent-cyan: #00d4ff;
@@ -31,116 +32,95 @@
         --z-overlay: 300;
         --z-modal: 400;
         --z-toast: 500;
+
+        /* Surface colors (RGB triplets — no commas — for Tailwind opacity modifier)
+           DEFAULT = DARK MODE (50=darkest, 950=lightest) */
+        --s-50:  6 10 18;
+        --s-100: 11 16 27;
+        --s-200: 21 29 43;
+        --s-300: 30 41 59;
+        --s-400: 51 65 85;
+        --s-500: 100 116 139;
+        --s-600: 148 163 184;
+        --s-700: 203 213 225;
+        --s-800: 226 232 240;
+        --s-900: 241 245 249;
+        --s-950: 248 250 252;
+    }
+
+    /* Light mode: invert surface palette */
+    [data-theme="light"] {
+        --s-50:  248 250 252;
+        --s-100: 241 245 249;
+        --s-200: 226 232 240;
+        --s-300: 203 213 225;
+        --s-400: 148 163 184;
+        --s-500: 100 116 139;
+        --s-600: 51 65 85;
+        --s-700: 30 41 59;
+        --s-800: 21 29 43;
+        --s-900: 11 16 27;
+        --s-950: 6 10 18;
     }
 
     body {
         @apply text-surface-700 antialiased;
-        background-color: #060a12;
+        background-color: rgb(var(--s-50) / 1);
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
         transition: background-color 0.4s ease, color 0.4s ease;
     }
-
-    /* ═════════════════════════════════════
-       END @layer base
-       ═════════════════════════════════════ */
 }
 
 /* ═══════════════════════════════════════
-   LIGHT MODE — @layer utilities (highest priority)
-   Must be in utilities layer to override Tailwind utility classes
+   LIGHT MODE — fix non-surface elements
+   Surface colors handled automatically via CSS variables (--s-50 to --s-950)
    ═══════════════════════════════════════ */
 @layer utilities {
-    /* ── Body & Root ── */
-    [data-theme="light"] body,
-    [data-theme="light"] { background-color: #f8fafc !important; }
-    [data-theme="light"] body { color: #0f1724 !important; }
+    /* ── text-white → dark in light mode (except on colored buttons) ── */
+    [data-theme="light"] .text-white { color: rgb(var(--s-950) / 1) !important; }
+    [data-theme="light"] .btn-primary,
+    [data-theme="light"] .btn-primary.text-white,
+    [data-theme="light"] .btn-neon,
+    [data-theme="light"] .bg-primary-600,
+    [data-theme="light"] .bg-primary-600.text-white,
+    [data-theme="light"] .bg-red-600.text-white,
+    [data-theme="light"] .bg-emerald-600.text-white { color: #ffffff !important; }
 
-    /* ── Surface Backgrounds (ALL variants) ── */
-    [data-theme="light"] .bg-surface-50,
-    [data-theme="light"] .bg-surface-50\/50,
-    [data-theme="light"] .bg-surface-50\/60,
-    [data-theme="light"] .bg-surface-50\/80 { background-color: #f8fafc !important; }
+    /* ── Glass & Card backgrounds ── */
+    [data-theme="light"] .glass,
+    [data-theme="light"] .card {
+        background-color: rgba(255,255,255,0.8) !important;
+        border-color: rgb(var(--s-200) / 1) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04) !important;
+    }
 
-    [data-theme="light"] .bg-surface-100,
-    [data-theme="light"] .bg-surface-100\/50,
-    [data-theme="light"] .bg-surface-100\/60 { background-color: #f1f5f9 !important; }
-
-    [data-theme="light"] .bg-surface-200,
-    [data-theme="light"] .bg-surface-200\/50 { background-color: #e2e8f0 !important; }
-
-    [data-theme="light"] .bg-surface-300,
-    [data-theme="light"] .bg-surface-300\/50 { background-color: #cbd5e1 !important; }
-
-    [data-theme="light"] .bg-surface-400,
-    [data-theme="light"] .bg-surface-400\/50 { background-color: #94a3b8 !important; }
-
-    [data-theme="light"] .bg-surface-700 { background-color: #cbd5e1 !important; }
-    [data-theme="light"] .bg-surface-800 { background-color: #e2e8f0 !important; }
-    [data-theme="light"] .bg-surface-900 { background-color: #f1f5f9 !important; }
-    [data-theme="light"] .bg-surface-950 { background-color: #f8fafc !important; }
-
-    /* ── Surface Text (ALL variants — light mode = dark text) ── */
-    [data-theme="light"] .text-surface-50  { color: #f8fafc !important; }
-    [data-theme="light"] .text-surface-100 { color: #f1f5f9 !important; }
-    [data-theme="light"] .text-surface-200 { color: #475569 !important; }
-    [data-theme="light"] .text-surface-300 { color: #334155 !important; }
-    [data-theme="light"] .text-surface-400 { color: #1e293b !important; }
-    [data-theme="light"] .text-surface-500 { color: #0f1724 !important; }
-    [data-theme="light"] .text-surface-600 { color: #020617 !important; }
-    [data-theme="light"] .text-surface-700 { color: #000000 !important; }
-    [data-theme="light"] .text-surface-800 { color: #000000 !important; }
-    [data-theme="light"] .text-surface-900 { color: #000000 !important; }
-    [data-theme="light"] .text-white { color: #0f1724 !important; }
-
-    /* ── Borders ── */
-    [data-theme="light"] .border-surface-200,
-    [data-theme="light"] .border-surface-300 { border-color: #cbd5e1 !important; }
+    /* ── White/transparent borders → subtle dark borders ── */
     [data-theme="light"] .border-white\/\[0\.03\],
     [data-theme="light"] .border-white\/\[0\.05\],
     [data-theme="light"] .border-white\/\[0\.06\],
-    [data-theme="light"] .border-white\/\[0\.08\] { border-color: rgba(0,0,0,0.06) !important; }
-    [data-theme="light"] .border-white\/\[0\.10\] { border-color: rgba(0,0,0,0.08) !important; }
+    [data-theme="light"] .border-white\/\[0\.08\],
+    [data-theme="light"] .border-white\/\[0\.10\] { border-color: rgb(var(--s-200) / 1) !important; }
 
-    /* ── Glass & Card ── */
-    [data-theme="light"] .card,
-    [data-theme="light"] .glass {
-        background-color: #ffffff !important;
-        border-color: #e2e8f0 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04) !important;
-    }
-    [data-theme="light"] .glass-light { background-color: rgba(255,255,255,0.85) !important; }
-    [data-theme="light"] .glass-nav {
-        background-color: rgba(255,255,255,0.9) !important;
-        border-color: rgba(0,0,0,0.06) !important;
-    }
-
-    /* ── Inputs ── */
+    /* ── Input fields ── */
     [data-theme="light"] .input {
         background-color: #ffffff !important;
-        border-color: #cbd5e1 !important;
-        color: #0f1724 !important;
+        border-color: rgb(var(--s-300) / 1) !important;
+        color: rgb(var(--s-800) / 1) !important;
     }
-    [data-theme="light"] .input::placeholder { color: #94a3b8 !important; }
+    [data-theme="light"] .input::placeholder { color: rgb(var(--s-400) / 1) !important; }
 
     /* ── Scrollbar ── */
-    [data-theme="light"] ::-webkit-scrollbar-track { background: #f1f5f9 !important; }
-    [data-theme="light"] ::-webkit-scrollbar-thumb { background: #cbd5e1 !important; }
-    [data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #94a3b8 !important; }
+    [data-theme="light"] ::-webkit-scrollbar-track { background: rgb(var(--s-100) / 1) !important; }
+    [data-theme="light"] ::-webkit-scrollbar-thumb { background: rgb(var(--s-300) / 1) !important; }
+    [data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgb(var(--s-400) / 1) !important; }
 
     /* ── Selection ── */
-    [data-theme="light"] ::selection { background: rgba(139,69,255,0.15) !important; color: #0f1724 !important; }
+    [data-theme="light"] ::selection { background: rgba(139,69,255,0.15) !important; color: rgb(var(--s-900) / 1) !important; }
 
     /* ── Skeleton loading ── */
     [data-theme="light"] .skeleton {
-        background: linear-gradient(90deg, #e2e8f0, #f1f5f9, #e2e8f0) !important;
+        background: linear-gradient(90deg, rgb(var(--s-200)/1), rgb(var(--s-100)/1), rgb(var(--s-200)/1)) !important;
     }
-
-    /* ── Buttons — white text stays white on colored bg ── */
-    [data-theme="light"] .bg-primary-600,
-    [data-theme="light"] .bg-primary-600.text-white,
-    [data-theme="light"] .btn-primary,
-    [data-theme="light"] .btn-primary.text-white,
-    [data-theme="light"] .btn-neon { color: #ffffff !important; }
 
     /* ── Shadows ── */
     [data-theme="light"] .shadow-elevation-2 {
@@ -148,17 +128,9 @@
     }
 
     /* ── Hover states ── */
-    [data-theme="light"] .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.05) !important; }
-    [data-theme="light"] .hover\:bg-white\/10:hover { background-color: rgba(0,0,0,0.08) !important; }
-    [data-theme="light"] .hover\:bg-surface-100\/60:hover { background-color: #f1f5f9 !important; }
-    [data-theme="light"] .hover\:bg-surface-200:hover { background-color: #e2e8f0 !important; }
-    [data-theme="light"] .hover\:text-white:hover { color: #0f1724 !important; }
-    [data-theme="light"] .hover\:text-surface-800:hover { color: #000000 !important; }
-
-    /* ── Sidebar & Nav ── */
-    [data-theme="light"] .sidebar-link { color: #334155 !important; }
-    [data-theme="light"] .sidebar-link:hover { background-color: #f1f5f9 !important; color: #0f1724 !important; }
-    [data-theme="light"] .sidebar-link.active { background-color: #ede5ff !important; color: #6b10ef !important; }
+    [data-theme="light"] .hover\:bg-white\/5:hover,
+    [data-theme="light"] .hover\:bg-white\/10:hover { background-color: rgb(var(--s-200) / 1) !important; }
+    [data-theme="light"] .hover\:text-white:hover { color: rgb(var(--s-950) / 1) !important; }
 }
 
 /* ═════════════════════════════════════
@@ -168,20 +140,13 @@
 
     * { @apply border-surface-300; }
 
-    body {
-        @apply text-surface-700 antialiased;
-        background-color: #060a12;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        transition: background-color 0.4s ease, color 0.4s ease;
-    }
-
     ::selection { @apply bg-primary-600/30 text-white; }
 
-    /* Scrollbar — dark default */
+    /* Scrollbar — uses surface colors (adapts to light/dark) */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0b101b; }
-    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    ::-webkit-scrollbar-track { background: rgb(var(--s-100) / 1); }
+    ::-webkit-scrollbar-thumb { background: rgb(var(--s-300) / 1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgb(var(--s-400) / 1); }
 
     /* Smooth scroll */
     html { scroll-behavior: smooth; }
