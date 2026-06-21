@@ -19,8 +19,9 @@ class UserManagementController extends Controller
 
         if ($request->has('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%');
+                $escaped = addcslashes($request->search, '%_');
+                $q->where('name', 'like', '%' . $escaped . '%')
+                  ->orWhere('email', 'like', '%' . $escaped . '%');
             });
         }
 

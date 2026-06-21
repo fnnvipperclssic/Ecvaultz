@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { useForm, usePage, router } from '@inertiajs/react';
+import { useForm, usePage, router, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AvatarUpload from '@/Components/AvatarUpload';
+import PasswordStrengthMeter from '@/Components/PasswordStrengthMeter';
+import NotificationPreferences from '@/Components/NotificationPreferences';
 
 export default function Profile({ sessions = [] }) {
     const { auth, flash } = usePage().props;
@@ -58,7 +61,12 @@ export default function Profile({ sessions = [] }) {
                     <h3 className="text-lg font-semibold text-surface-900">Profile information</h3>
                     <p className="mt-1 text-sm text-surface-500">Update your account profile details</p>
 
-                    <form onSubmit={updateProfile} className="mt-6 space-y-4">
+                    {/* Avatar Upload */}
+                    <div className="mt-6 mb-6 pb-6 border-b border-surface-200">
+                        <AvatarUpload currentAvatarUrl={auth?.user?.avatar_url} />
+                    </div>
+
+                    <form onSubmit={updateProfile} className="space-y-4">
                         <div>
                             <label className="label">Name</label>
                             <input
@@ -131,6 +139,8 @@ export default function Profile({ sessions = [] }) {
                                 required
                             />
                             {passwordForm.errors.password && <p className="mt-1 text-xs text-red-500">{passwordForm.errors.password}</p>}
+                            {/* Password strength meter */}
+                            <PasswordStrengthMeter password={passwordForm.data.password} />
                         </div>
                         <div>
                             <label className="label">Confirm new password</label>
@@ -185,6 +195,20 @@ export default function Profile({ sessions = [] }) {
                     </div>
                 </div>
 
+                {/* Recovery Kit */}
+                <div className="card border-amber-500/20">
+                    <h3 className="text-lg font-semibold text-surface-900">Encryption Recovery Kit</h3>
+                    <p className="mt-1 text-sm text-surface-500">
+                        Your 12-word recovery phrase can restore access to encrypted files if you lose your password
+                    </p>
+                    <Link href="/profile/recovery-kit" className="btn-secondary mt-4 text-sm inline-flex items-center gap-2">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                        </svg>
+                        View Recovery Phrase
+                    </Link>
+                </div>
+
                 {/* Sessions */}
                 {sessions.length > 0 && (
                     <div className="card">
@@ -212,6 +236,9 @@ export default function Profile({ sessions = [] }) {
                         </button>
                     </div>
                 )}
+
+                {/* Notification Preferences */}
+                <NotificationPreferences preferences={auth?.notification_preferences || {}} />
 
                 {/* Danger Zone */}
                 <div className="card border-red-200">

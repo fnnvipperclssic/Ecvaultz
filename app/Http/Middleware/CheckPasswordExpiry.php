@@ -19,9 +19,23 @@ class CheckPasswordExpiry
         $expiryDays = (int) config('security.password.expiry_days', 90);
 
         if ($expiryDays > 0 && $user->password_changed_at->addDays($expiryDays)->isPast()) {
-            // Allow password change routes
-            if ($request->routeIs('profile.password.update') || $request->routeIs('logout')) {
+            // Whitelisted routes — these are always allowed
+            $allowedRoutes = [
+                'profile.edit',
+                'profile.update',
+                'profile.password.update',
+                'logout',
+                '2fa.challenge',
+                'password.update',
+            ];
+
+            if ($request->routeIs($allowedRoutes)) {
                 return $next($request);
+            }
+
+            // Block all other routes with a force redirect
+            if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+                abort(403, 'Your password has expired. Please change it to continue.');
             }
 
             return redirect()->route('profile.edit')

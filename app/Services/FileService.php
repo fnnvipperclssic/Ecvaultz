@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
@@ -47,6 +48,22 @@ class FileService
 
         if ($uploadedFile->getSize() > config('security.max_upload_size', 52428800)) {
             throw new \RuntimeException('File size exceeds maximum allowed size.');
+        }
+
+        // Check storage quota
+        $quota = $user->storage_quota ?? config('security.default_storage_quota', 5368709120); // 5GB default
+        $used = (int) File::where('user_id', $user->id)->whereNull('deleted_at')->sum('size');
+        $newFileSize = $uploadedFile->getSize();
+
+        if ($quota > 0 && ($used + $newFileSize) > $quota) {
+            throw ValidationException::withMessages([
+                'files' => [
+                    'Storage quota exceeded. You have used ' . $this->formatBytes($used)
+                        . ' of ' . $this->formatBytes($quota)
+                        . '. This file requires ' . $this->formatBytes($newFileSize)
+                        . ' but only ' . $this->formatBytes(max(0, $quota - $used)) . ' remaining.',
+                ],
+            ]);
         }
 
         // Scan with ClamAV if enabled
@@ -315,5 +332,73 @@ class FileService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Duplicate a file: copy the physical file and create a new DB record.
+     */
+    public function duplicateFile(User $user, File $originalFile): File
+    {
+        // Check storage quota
+        $quota = $user->storage_quota ?? config('security.default_storage_quota', 5368709120);
+        $used = (int) File::where('user_id', $user->id)->whereNull('deleted_at')->sum('size');
+
+        if ($quota > 0 && ($used + $originalFile->size) > $quota) {
+            throw new \RuntimeException('Cannot duplicate file: storage quota would be exceeded.');
+        }
+
+        if (!Storage::disk('private')->exists($originalFile->path)) {
+            throw new \RuntimeException('Original file not found on storage.');
+        }
+
+        // Generate new stored name
+        $extension = pathinfo($originalFile->original_name, PATHINFO_EXTENSION);
+        $storedName = $this->security->generateSecureFilename($originalFile->original_name);
+        $relativePath = 'user_' . $user->id;
+
+        if ($originalFile->folder_id) {
+            $relativePath .= '/folder_' . $originalFile->folder_id;
+        }
+
+        // Copy the encrypted physical file
+        $newPath = $relativePath . '/' . $storedName;
+        Storage::disk('private')->copy($originalFile->path, $newPath);
+
+        // Create new file record
+        $newFile = File::create([
+            'user_id' => $user->id,
+            'folder_id' => $originalFile->folder_id,
+            'original_name' => 'Copy of ' . $originalFile->original_name,
+            'stored_name' => $storedName,
+            'mime_type' => $originalFile->mime_type,
+            'size' => $originalFile->size,
+            'path' => $newPath,
+            'is_encrypted' => $originalFile->is_encrypted,
+            'checksum_sha256' => $originalFile->checksum_sha256,
+        ]);
+
+        ActivityLog::log($user->id, 'file_duplicated', request()->ip(), request()->userAgent(), [
+            'original_file_uuid' => $originalFile->uuid,
+            'new_file_uuid' => $newFile->uuid,
+            'original_name' => $newFile->original_name,
+        ]);
+
+        cache()->forget('user_files_' . $user->id);
+
+        return $newFile;
+    }
+
+    /**
+     * Format bytes to human-readable string.
+     */
+    protected function formatBytes(int $bytes, int $precision = 2): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+
+        return round($bytes, $precision) . ' ' . $units[$pow];
     }
 }

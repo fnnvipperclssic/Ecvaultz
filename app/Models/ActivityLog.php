@@ -28,6 +28,14 @@ class ActivityLog extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Scope to filter activity logs for a specific file by its UUID stored in metadata.
+     */
+    public function scopeForFile($query, string $fileUuid): void
+    {
+        $query->where('metadata->file_uuid', $fileUuid);
+    }
+
     public static function log(int|string|null $userId, string $action, ?string $ip = null, ?string $userAgent = null, array $metadata = []): self
     {
         return static::create([

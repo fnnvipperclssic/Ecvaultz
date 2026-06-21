@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\SystemSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,7 +36,7 @@ class SystemSettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         // Only allow updating certain settings
-        $request->validate([
+        $validated = $request->validate([
             'max_upload_size' => ['integer', 'min:1048576', 'max:1073741824'],
             'upload_rate_limit' => ['integer', 'min:1', 'max:100'],
             'download_rate_limit' => ['integer', 'min:1', 'max:100'],
@@ -46,14 +48,20 @@ class SystemSettingsController extends Controller
             'soft_delete_retention_days' => ['integer', 'min:1', 'max:365'],
         ]);
 
-        // Settings are stored via env/config - this is a placeholder
-        // In production, these would write to a database settings table
+        // Persist each setting to the system_settings table
+        foreach ($validated as $key => $value) {
+            SystemSetting::set($key, is_bool($value) ? ($value ? '1' : '0') : (string) $value);
+        }
+
+        // Clear config cache so settings take effect
+        if (app()->environment('production')) {
+            Artisan::call('config:clear');
+        }
+
         ActivityLog::log($request->user()->id, 'admin_updated_settings', $request->ip(), $request->userAgent(), [
-            'settings' => $request->only([
-                'max_upload_size', 'upload_rate_limit', 'two_factor_required',
-            ]),
+            'settings' => array_keys($validated),
         ]);
 
-        return back()->with('success', 'Settings updated. Note: Some changes require a server restart.');
+        return back()->with('success', 'Settings updated successfully.');
     }
 }

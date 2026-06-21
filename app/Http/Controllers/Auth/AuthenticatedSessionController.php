@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Mail\SecurityAlertMail;
 use App\Models\ActivityLog;
 use App\Services\SecurityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -51,6 +53,24 @@ class AuthenticatedSessionController extends Controller
             ActivityLog::log($user->id, 'new_device_login', $request->ip(), $request->userAgent(), [
                 'previous_ip' => $user->last_login_ip,
             ]);
+
+            // Send security alert email for new device login
+            try {
+                Mail::to($user->email)->send(new SecurityAlertMail(
+                    user: $user,
+                    alertType: 'new_device_login',
+                    details: [
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'time' => now()->toDateTimeString(),
+                    ]
+                ));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to send new device login email', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         // If user has 2FA enabled, redirect to challenge instead of dashboard

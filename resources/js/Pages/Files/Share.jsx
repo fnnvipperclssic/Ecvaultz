@@ -6,6 +6,7 @@ export default function Share({ sharedByMe, sharedWithMe, myFiles = [] }) {
     const { flash } = usePage().props;
     const [showModal, setShowModal] = useState(false);
     const [shareLink, setShareLink] = useState(null);
+    const [notifyRecipient, setNotifyRecipient] = useState(true);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         file_uuid: '',
@@ -14,6 +15,7 @@ export default function Share({ sharedByMe, sharedWithMe, myFiles = [] }) {
         permission: 'read',
         password: '',
         expires_in_hours: '24',
+        notify: true,
     });
 
     const openShareModal = () => {
@@ -163,6 +165,20 @@ export default function Share({ sharedByMe, sharedWithMe, myFiles = [] }) {
                                     {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
                                 </div>
 
+                                {/* Notify recipient checkbox */}
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="notify_recipient"
+                                        checked={data.notify}
+                                        onChange={(e) => setData('notify', e.target.checked)}
+                                        className="h-4 w-4 rounded border-surface-300 text-primary-600"
+                                    />
+                                    <label htmlFor="notify_recipient" className="text-sm text-surface-700 cursor-pointer">
+                                        Notify recipient via email
+                                    </label>
+                                </div>
+
                                 <div>
                                     <label className="label">Permission</label>
                                     <select
@@ -230,6 +246,7 @@ export default function Share({ sharedByMe, sharedWithMe, myFiles = [] }) {
                                         <th className="table-header">Permission</th>
                                         <th className="table-header">Type</th>
                                         <th className="table-header">Expires</th>
+                                        <th className="table-header hidden lg:table-cell">Access</th>
                                         <th className="table-header w-10"></th>
                                     </tr>
                                 </thead>
@@ -250,6 +267,16 @@ export default function Share({ sharedByMe, sharedWithMe, myFiles = [] }) {
                                                         {share.expires_at}
                                                     </span>
                                                 ) : 'Never'}
+                                            </td>
+                                            <td className="table-cell hidden lg:table-cell text-xs text-surface-500">
+                                                <div className="flex flex-col">
+                                                    {share.access_count !== undefined && (
+                                                        <span>Accessed {share.access_count} times</span>
+                                                    )}
+                                                    {share.last_accessed_at && (
+                                                        <span>Last: {share.last_accessed_at}</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-3 pr-4">
                                                 <button onClick={() => removeShare(share.uuid)} className="rounded p-1 text-surface-400 hover:text-red-600 hover:bg-red-500/10">

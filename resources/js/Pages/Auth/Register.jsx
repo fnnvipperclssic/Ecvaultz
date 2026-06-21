@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useForm } from '@inertiajs/react';
 import GuestLayout from '@/Layouts/GuestLayout';
+import PasswordStrengthMeter from '@/Components/PasswordStrengthMeter';
 
 export default function Register() {
     const { data, setData, post, processing, errors } = useForm({ name: '', email: '', password: '', password_confirmation: '' });
@@ -8,15 +9,21 @@ export default function Register() {
 
     const handleSubmit = (e) => { e.preventDefault(); post('/register'); };
 
-    const passwordStrength = React.useMemo(() => {
-        const pwd = data.password; let score = 0;
-        if (pwd.length >= 12) score++; if (/[A-Z]/.test(pwd)) score++;
-        if (/[0-9]/.test(pwd)) score++; if (/[^A-Za-z0-9]/.test(pwd)) score++;
-        if (pwd.length >= 16) score++; return score;
-    }, [data.password]);
+    const commonErrors = {
+        'email already exists': 'This email is already registered. Try logging in instead.',
+        'the email has already been taken': 'This email is already registered. Try logging in instead.',
+        'the password field is required': 'Password is required.',
+        'the name field is required': 'Name is required.',
+        'password confirmation does not match': 'Passwords do not match.',
+    };
 
-    const strengthColors = ['bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400', 'bg-emerald-400'];
-    const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    const getReadableError = (key, message) => {
+        const lower = message?.toLowerCase() || '';
+        for (const [pattern, readable] of Object.entries(commonErrors)) {
+            if (lower.includes(pattern)) return readable;
+        }
+        return message;
+    };
 
     return (
         <GuestLayout>
@@ -26,18 +33,29 @@ export default function Register() {
                     <p className="text-sm text-surface-500">Secure. Private. Yours.</p>
                 </div>
 
+                {errors.name && (
+                    <div className="rounded-lg bg-red-500/10 border border-red-200 p-3">
+                        <p className="text-xs text-red-500">{getReadableError('name', errors.name)}</p>
+                    </div>
+                )}
+                {errors.email && (
+                    <div className="rounded-lg bg-red-500/10 border border-red-200 p-3">
+                        <p className="text-xs text-red-500">{getReadableError('email', errors.email)}</p>
+                    </div>
+                )}
+
                 <div>
                     <label htmlFor="name" className="label">Full name</label>
                     <input id="name" type="text" value={data.name} onChange={(e) => setData('name', e.target.value)}
                         className={`input ${errors.name ? 'input-error' : ''}`} placeholder="John Doe" autoComplete="name" required />
-                    {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name}</p>}
+                    {errors.name && <p className="mt-1 text-xs text-red-400">{getReadableError('name', errors.name)}</p>}
                 </div>
 
                 <div>
                     <label htmlFor="email" className="label">Email address</label>
                     <input id="email" type="email" value={data.email} onChange={(e) => setData('email', e.target.value)}
                         className={`input ${errors.email ? 'input-error' : ''}`} placeholder="you@example.com" autoComplete="email" required />
-                    {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
+                    {errors.email && <p className="mt-1 text-xs text-red-400">{getReadableError('email', errors.email)}</p>}
                 </div>
 
                 <div>
@@ -54,37 +72,16 @@ export default function Register() {
                             </svg>
                         </button>
                     </div>
-                    {data.password && (<>
-                        <div className="mt-2 flex gap-1">
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i < passwordStrength ? strengthColors[passwordStrength - 1] : 'bg-surface-300'}`} />
-                            ))}
-                        </div>
-                        <p className="mt-1 text-xs text-surface-500">{strengthLabels[Math.max(0, passwordStrength - 1)]}</p>
-                    </>)}
-                    {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password}</p>}
-                    <ul className="mt-2 space-y-1">
-                        {[
-                            { label: 'At least 12 characters', met: data.password.length >= 12 },
-                            { label: 'One uppercase letter', met: /[A-Z]/.test(data.password) },
-                            { label: 'One number', met: /[0-9]/.test(data.password) },
-                            { label: 'One special character', met: /[^A-Za-z0-9]/.test(data.password) },
-                        ].map((req) => (
-                            <li key={req.label} className="flex items-center gap-2 text-xs">
-                                <svg className={`h-3 w-3 ${data.password ? (req.met ? 'text-security' : 'text-surface-500') : 'text-surface-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span className={data.password ? (req.met ? 'text-security-light' : 'text-surface-500') : 'text-surface-500'}>{req.label}</span>
-                            </li>
-                        ))}
-                    </ul>
+                    {errors.password && <p className="mt-1 text-xs text-red-400">{getReadableError('password', errors.password)}</p>}
+                    {/* Password Strength Meter */}
+                    <PasswordStrengthMeter password={data.password} />
                 </div>
 
                 <div>
                     <label htmlFor="password_confirmation" className="label">Confirm password</label>
                     <input id="password_confirmation" type="password" value={data.password_confirmation} onChange={(e) => setData('password_confirmation', e.target.value)}
                         className={`input ${errors.password_confirmation ? 'input-error' : ''}`} placeholder="Re-enter your password" autoComplete="new-password" required />
-                    {errors.password_confirmation && <p className="mt-1 text-xs text-red-400">{errors.password_confirmation}</p>}
+                    {errors.password_confirmation && <p className="mt-1 text-xs text-red-400">{getReadableError('password_confirmation', errors.password_confirmation)}</p>}
                 </div>
 
                 <button type="submit" disabled={processing} className="btn-primary w-full">

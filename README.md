@@ -1,8 +1,8 @@
 # 🔐 Ecvaultz — Digital Vault
 
-> **Enterprise-grade digital vault for secure file storage, management, and sharing.**
-> AES-256-GCM encryption · Two-Factor Authentication · Defense-in-Depth Security
-> Built with Laravel 11 + React + Inertia.js — OWASP Top 10 Compliant
+> **Enterprise-grade digital vault for secure file storage, management, and collaboration.**
+> AES-256-GCM encryption · Two-Factor Authentication · Virtual Data Rooms · OWASP Compliant
+> Built with Laravel 11 + React + Inertia.js
 
 <p align="center">
   <img src="https://img.shields.io/badge/PHP-8.2%2B-7c22ff?logo=php" alt="PHP">
@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/Encryption-AES--256--GCM-10b981" alt="Encryption">
   <img src="https://img.shields.io/badge/Auth-2FA%20TOTP-10b981" alt="2FA">
   <img src="https://img.shields.io/badge/OWASP-Compliant-10b981" alt="OWASP">
+  <img src="https://img.shields.io/badge/PWA-Enabled-10b981" alt="PWA">
   <img src="https://img.shields.io/badge/License-MIT-blue" alt="License">
 </p>
 
@@ -21,17 +22,15 @@
 
 - [What is Ecvaultz?](#-what-is-ecvaultz)
 - [Features](#-features)
-- [Tech Stack](#%EF%B8%8F-tech-stack)
-- [Quick Start (Local)](#-quick-start-local-development)
-- [Production Deployment (Ubuntu)](#-production-deployment-ubuntu-2204-lts)
-- [Docker Deployment](#-docker-deployment)
+- [Tech Stack](#️-tech-stack)
+- [Quick Start (Docker)](#-docker-recommended)
+- [Local Development](#-local-development)
+- [Production Deployment](#-production-deployment-ubuntu)
 - [Environment Variables](#-environment-variables-reference)
 - [Security Architecture](#-security-architecture)
 - [Project Structure](#-project-structure)
 - [Default Accounts](#-default-accounts)
 - [Scheduled Tasks](#-scheduled-tasks)
-- [Documentation Files](#-documentation-files)
-- [Common Commands](#-common-artisan-commands)
 - [Troubleshooting](#-troubleshooting)
 - [Contributing](#-contributing)
 - [Security Policy](#-security-policy)
@@ -41,51 +40,95 @@
 
 ## 🎯 What is Ecvaultz?
 
-Ecvaultz is a **self-hosted digital vault** — a secure web application for storing, managing, and sharing sensitive digital files. Think of it as your personal bank vault, but for digital documents.
+Ecvaultz is a **self-hosted digital vault** — a secure web application for storing, managing, sharing, and collaborating on sensitive digital files. Think of it as your personal bank vault, but for digital documents — with enterprise features like Virtual Data Rooms, dynamic watermarking, and complete chain-of-custody auditing.
 
 ### Why Ecvaultz?
 
 | Problem | Ecvaultz Solution |
 |---|---|
 | Files stored in plaintext on cloud | AES-256-GCM encryption with per-user keys |
-| Weak authentication | TOTP 2FA + Account lockout + Password policies |
-| No audit trail | Complete activity logging with IP tracking |
-| Uncontrolled sharing | Password-protected links with expiry dates |
+| Weak authentication | TOTP 2FA + Account lockout + Password expiry + HIBP breach detection |
+| No audit trail | Complete activity logging with IP tracking + per-file audit trail |
+| Uncontrolled sharing | Password-protected links with expiry + Dynamic watermarking + Data Rooms |
 | No access control | 28 granular permissions via Spatie RBAC |
+| No recovery mechanism | BIP39 encryption key recovery kit (12-word mnemonic) |
+| Weak passwords | Real-time password strength meter + Common password detection |
+| Storage abuse | Per-user storage quotas with visual dashboard |
 
 ### Use Cases
-- **Personal:** Store sensitive documents (passports, contracts, tax records)
-- **Business:** Secure file sharing with clients and team members
-- **Enterprise:** Compliance-ready storage with full audit trails
-- **Legal/Medical:** HIPAA-ready architecture with chain of custody tracking
+- **Personal:** Store sensitive documents (passports, contracts, tax records) with favorites & tags
+- **Business:** Secure file sharing with clients via Virtual Data Rooms with full branding
+- **Enterprise:** Compliance-ready storage with immutable audit trails and retention policies
+- **Legal/Medical:** HIPAA-ready architecture with chain of custody tracking + watermarking
+- **M&A / Due Diligence:** Curated data rooms with granular access control and expiry
 
 ---
 
 ## ✨ Features
 
-### Core
-- **🔒 File Encryption** — AES-256-GCM with per-user encryption keys. Files encrypted at rest, decrypted on-demand. Keys stored separately from data.
-- **📂 File Management** — Upload (drag-and-drop), download, preview (PDF/images), rename, move between folders, search with debounce, sortable columns.
-- **📁 Folder Hierarchy** — Nested folders with breadcrumb navigation. Folder tree API for sidebar navigation.
-- **🔗 Secure Sharing** — Internal sharing (user-to-user, read/write permissions) and external share links (password-protected, expiry dates, SHA-256 token hashing).
-- **🗑️ Trash & Recovery** — Soft-delete with 30-day retention. Restore with one click. Permanent deletion requires password confirmation.
+### 🔒 File Security
+- **AES-256-GCM Encryption** — Per-user encryption keys. Files encrypted at rest, decrypted on-demand
+- **Encryption Key Recovery** — BIP39 12-word mnemonic recovery kit (PDF downloadable)
+- **SHA-256 Checksums** — Integrity verification on every download
+- **ClamAV Integration** — Optional malware scanning on upload
+- **Dynamic Watermarking** — Auto-watermark previews with viewer email, timestamp, IP, "CONFIDENTIAL" stamp for shared files
+- **HIBP Breach Detection** — k-anonymity password breach check on login and password change
+- **File Expiry / Self-Destruct** — Set expiration dates on files with automatic cleanup
 
-### Security
-- **🛡️ Two-Factor Authentication** — TOTP-based (Google Authenticator, Authy). 8 recovery codes. Requires TOTP verification to disable 2FA or regenerate recovery codes.
-- **🔐 Account Protection** — Brute-force lockout (5 attempts → 15 min lock). Per-account + per-IP rate limiting. Security questions for password reset fallback.
-- **🦠 Malware Scanning** — Optional ClamAV integration. MIME validation via finfo (magic bytes). SHA-256 checksum verification on download.
-- **📋 Complete Audit Trail** — Every action logged: logins, uploads, downloads, shares, deletions. IP addresses, user agents, timestamps. CSV export for compliance.
-- **🛡️ OWASP Top 10 Compliant** — CSRF protection, XSS prevention (CSP + React escaping), SQL injection prevention (Eloquent ORM), input validation (server-side), security headers, HSTS, file upload security, path traversal protection.
+### 📂 File Management
+- **Drag-and-Drop Upload** — Multi-file upload with progress bars and dropzone
+- **Favorites & Tags** — Star important files. Color-coded labels with custom tag creation
+- **Global Search** — Search across all folders with keyboard navigation (debounced, min 2 chars)
+- **File Copy/Duplicate** — One-click file duplication preserving encryption
+- **File Descriptions** — Add notes/descriptions to any file
+- **Preview** — Inline preview for images, PDFs, with zoom controls
+- **Version History** — Track file versions with side-by-side diff comparison (text files)
+- **Breadcrumb Navigation** — Clickable folder path breadcrumbs
+- **Right-Click Context Menu** — 9 quick actions on file rows
 
-### Administration
-- **👑 Role-Based Access Control** — Admin & User roles via Spatie Laravel Permission. 28 granular permissions covering files, folders, shares, logs, users, admin, settings.
-- **📊 Admin Dashboard** — Global stats (users, files, storage, shares). User management (view, edit roles, ban/unban). Activity log viewer with filters and CSV export. System settings management.
-- **🔔 Notifications** — In-app notification system. File shared alerts. New device login alerts. Mark as read / mark all read.
+### 📁 Organization
+- **Nested Folders** — Hierarchical folder structure with tree sidebar
+- **Storage Quota** — Per-user quota limits with color-coded dashboard bar
+- **Trash & Recovery** — 30-day soft-delete with search, bulk restore, empty trash, per-file countdown
 
-### User Experience
-- **🎨 Premium Dark Theme** — Glass morphism design with backdrop blur. Animated glow orbs and particle network background. Smooth scroll-triggered reveal animations.
-- **⚡ Command Palette** — `Ctrl+K` quick navigation. Keyboard shortcuts for power users.
-- **📱 Responsive Design** — Mobile-friendly with adaptive sidebar. Touch-optimized interactions. PWA manifest for installable web app.
+### 🔗 Sharing & Collaboration
+- **Internal Sharing** — User-to-user with read/write permissions + email notifications
+- **External Share Links** — Password-protected, expiry dates, SHA-256 token hashing
+- **Share Access Tracking** — View count, last accessed time, access audit
+- **Share Preview** — Inline file preview through share links (images/PDFs)
+- **Virtual Data Rooms** — Branded, curated spaces for external collaboration with:
+  - Custom branding (logo, colors)
+  - File collections with granular access
+  - Invite management with access codes
+  - Full audit trail per room
+  - Room expiry dates
+
+### 🛡️ Authentication & Security
+- **TOTP 2FA** — Google Authenticator / Authy with 8 recovery codes
+- **Password Policy** — Min 12 chars, mixed case, numbers, symbols, 90-day expiry
+- **Password Strength Meter** — Real-time 6-criteria indicator on all password forms
+- **Account Lockout** — 5 attempts → 15 min lockout with email notification
+- **Security Questions** — Fallback for password reset
+- **Session Security** — HTTP-only cookies, SameSite strict, idle timeout, session regeneration
+- **Security Headers** — CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, CORP
+- **Rate Limiting** — Per-IP + per-account on login, upload, download, 2FA, password reset
+
+### 📊 Administration
+- **RBAC** — Admin & User roles with 28 granular Spatie permissions
+- **Admin Dashboard** — Global stats, recent registrations, top uploaders
+- **User Management** — Search, role/permission editing, ban/unban (with soft-delete)
+- **System Settings** — Persistent key-value configuration management
+- **Activity Log** — Global + per-file audit trails with CSV export and date filters
+- **Notification System** — In-app + email notifications for shares, logins, security events
+
+### 🎨 User Experience
+- **Dark/Light Theme** — Glass morphism design with persistent preference
+- **Command Palette** — `Ctrl+K` quick navigation
+- **Keyboard Shortcuts** — `?` dialog with categorized shortcuts
+- **Onboarding Tour** — 8-step guided tour for new users
+- **PWA Support** — Service worker with offline page and push notifications
+- **Responsive Design** — Mobile-friendly with adaptive sidebar
+- **Notification Preferences** — 7 toggle switches for email + in-app notifications
 
 ---
 
@@ -102,19 +145,95 @@ Ecvaultz is a **self-hosted digital vault** — a secure web application for sto
 | **RBAC** | Spatie Laravel Permission 6.x | Role-based access control |
 | **Encryption** | OpenSSL AES-256-GCM | File encryption at rest |
 | **Queue** | Database / Redis | Async job processing |
-| **Mail** | SMTP (Mailtrap/Resend/Mailpit) | Email notifications |
+| **Mail** | SMTP (Mailpit for dev) | Email notifications |
 | **Container** | Docker, Docker Compose | Production deployment |
 
 ---
 
-## 🚀 Quick Start (Local Development)
+## 🐳 Docker (Recommended)
+
+### One-Command Start
+
+```bash
+# Windows / Linux / Mac:
+docker compose up -d
+
+# Open: http://localhost:8080
+```
+
+**That's it.** Docker automatically:
+- Builds the PHP + React application
+- Starts MariaDB, Redis, and Mailpit
+- Generates `.env` from environment variables
+- Creates APP_KEY (if not set)
+- Runs all 17 database migrations
+- Seeds default accounts (first run only)
+- Optimizes caches (config, route, view)
+
+**First run takes 2-3 minutes.** Subsequent starts are instant.
+
+### Access After Start
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| **Ecvaultz App** | http://localhost:8080 | Main application |
+| **Email Testing** | http://localhost:8025 | Mailpit — view all sent emails |
+
+### Default Accounts (Docker)
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@ecvaultz.test` | `Admin@Ecvaultz#2024!` |
+| User | `user@ecvaultz.test` | `User@Ecvaultz#2024!` |
+| Demo | `demo@ecvaultz.test` | `Demo@Ecvaultz#2024!` |
+
+> ⚠️ **Change default passwords after first login!**
+
+### Services
+
+| Service | Container | Port |
+|---------|-----------|------|
+| **App** (Nginx + PHP-FPM + Supervisor) | `ecvaultz-app` | 8080 |
+| **Database** (MariaDB 10.11) | `ecvaultz-db` | 3307 |
+| **Cache** (Redis 7 Alpine) | `ecvaultz-redis` | — (internal) |
+| **Mail** (Mailpit) | `ecvaultz-mailpit` | 8025 (UI), 1025 (SMTP) |
+
+### Useful Docker Commands
+
+```bash
+# View logs
+docker compose logs -f app
+
+# Run artisan commands
+docker compose exec app php artisan migrate:status
+docker compose exec app php artisan route:list
+
+# Reset everything (delete all data)
+docker compose down -v
+docker compose up -d
+
+# Rebuild after code changes
+docker compose build
+docker compose up -d
+
+# Stop
+docker compose down
+```
+
+### Windows Quick Start
+
+Double-click **`start.bat`** — builds and starts everything automatically.
+
+---
+
+## 💻 Local Development
 
 ### Prerequisites
 - PHP 8.2+ with extensions: `pdo_mysql`, `mbstring`, `gd`, `zip`, `exif`, `intl`, `bcmath`, `openssl`
 - Composer 2.x
 - Node.js 20+ & npm 10+
 - MariaDB 10.11+ or MySQL 8.0+
-- Redis 7+ (optional for dev, required for production)
+- Redis 7+ (optional for dev)
 
 ### Steps
 
@@ -131,16 +250,10 @@ npm install
 cp .env.example .env
 php artisan key:generate
 
-# 4. Create database (MySQL/MariaDB)
+# 4. Create database
 mysql -u root -e "CREATE DATABASE ecvaultz CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # 5. Edit .env with your database credentials
-# DB_CONNECTION=mariadb
-# DB_HOST=127.0.0.1
-# DB_PORT=3306
-# DB_DATABASE=ecvaultz
-# DB_USERNAME=root
-# DB_PASSWORD=
 
 # 6. Run migrations and seed
 php artisan migrate --seed
@@ -156,7 +269,6 @@ Open **http://127.0.0.1:8000** in your browser.
 
 ### Hot Module Replacement (Dev)
 
-In a second terminal:
 ```bash
 npm run dev
 ```
@@ -164,385 +276,59 @@ Frontend changes reflected instantly without manual rebuild.
 
 ---
 
-## 🏭 Production Deployment (Ubuntu 22.04 LTS)
+## 🏭 Production Deployment (Ubuntu)
 
-Complete step-by-step guide for deploying Ecvaultz on a production Ubuntu server.
-
-### Step 1: Server Preparation
+### Quick Steps
 
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
+# 1. Install system packages
+sudo apt install -y nginx mysql-server redis-server \
+    php8.2-fpm php8.2-mysql php8.2-mbstring php8.2-gd \
+    php8.2-zip php8.2-exif php8.2-intl php8.2-bcmath \
+    php8.2-redis php8.2-opcache php8.2-cli \
+    composer nodejs npm certbot supervisor
 
-# Set timezone
-sudo timedatectl set-timezone UTC
-
-# Create swap file (recommended for 1-2GB RAM)
-sudo fallocate -l 2G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-```
-
-### Step 2: Install System Packages
-
-```bash
-# Add PHP repository
-sudo add-apt-repository ppa:ondrej/php -y
-sudo apt update
-
-# Install all required packages
-sudo apt install -y \
-    nginx \
-    mysql-server \
-    redis-server \
-    php8.2-fpm \
-    php8.2-mysql \
-    php8.2-mbstring \
-    php8.2-gd \
-    php8.2-zip \
-    php8.2-exif \
-    php8.2-intl \
-    php8.2-bcmath \
-    php8.2-redis \
-    php8.2-opcache \
-    php8.2-cli \
-    composer \
-    nodejs \
-    npm \
-    certbot \
-    python3-certbot-nginx \
-    unzip \
-    git \
-    supervisor
-```
-
-### Step 3: Configure MySQL/MariaDB
-
-```bash
-# Secure MySQL installation
-sudo mysql_secure_installation
-# Answer: Y (validate password), 2 (STRONG), set root password, Y (remove anonymous), Y (disallow remote root), Y (remove test DB), Y (reload privileges)
-
-# Create database and user
-sudo mysql -u root -p <<EOF
-CREATE DATABASE ecvaultz CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'ecvaultz'@'localhost' IDENTIFIED BY 'YOUR_SECURE_DB_PASSWORD';
-GRANT ALL PRIVILEGES ON ecvaultz.* TO 'ecvaultz'@'localhost';
-FLUSH PRIVILEGES;
-EOF
-```
-
-### Step 4: Configure Redis
-
-```bash
-# Enable Redis persistence
-sudo sed -i 's/^appendonly no/appendonly yes/' /etc/redis/redis.conf
-
-# Set Redis password (optional but recommended)
-sudo sed -i 's/^# requirepass foobared/requirepass YOUR_REDIS_PASSWORD/' /etc/redis/redis.conf
-
-# Restart Redis
-sudo systemctl restart redis-server
-sudo systemctl enable redis-server
-```
-
-### Step 5: Clone & Setup Application
-
-```bash
-# Create application directory
-sudo mkdir -p /var/www/ecvaultz
-sudo chown $USER:$USER /var/www/ecvaultz
-
-# Clone repository
+# 2. Clone and setup
 git clone https://github.com/your-username/ecvaultz.git /var/www/ecvaultz
 cd /var/www/ecvaultz
-
-# Install PHP dependencies (production only)
 composer install --no-dev --optimize-autoloader --no-interaction
+npm ci --no-audit && npm run build
 
-# Install and build frontend
-npm ci --no-audit
-npm run build
-
-# Configure environment
+# 3. Configure .env for production
 cp .env.example .env
+# Edit: APP_ENV=production, APP_DEBUG=false, APP_URL=https://your-domain.com
+# Set DB credentials, Redis, and SMTP settings
+# FORCE_HTTPS=true (enable HTTPS URL generation)
 php artisan key:generate
 
-# Edit .env for production
-nano .env
-```
+# 4. Set permissions
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
 
-**Production `.env` values:**
-```env
-APP_NAME=Ecvaultz
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://your-domain.com
-
-DB_CONNECTION=mariadb
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=ecvaultz
-DB_USERNAME=ecvaultz
-DB_PASSWORD=YOUR_SECURE_DB_PASSWORD
-
-REDIS_HOST=127.0.0.1
-REDIS_PASSWORD=YOUR_REDIS_PASSWORD
-REDIS_PORT=6379
-
-MAIL_MAILER=smtp
-MAIL_HOST=your-smtp-host
-MAIL_PORT=587
-MAIL_USERNAME=your-smtp-username
-MAIL_PASSWORD=your-smtp-password
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=noreply@your-domain.com
-
-SESSION_DRIVER=database
-SESSION_SECURE_COOKIE=true
-CACHE_DRIVER=redis
-QUEUE_CONNECTION=database
-
-SCAN_UPLOADS=true
-HSTS_MAX_AGE=31536000
-TRUSTED_PROXIES=*
-```
-
-### Step 6: Set Permissions
-
-```bash
-# Set ownership
-sudo chown -R www-data:www-data /var/www/ecvaultz/storage
-sudo chown -R www-data:www-data /var/www/ecvaultz/bootstrap/cache
-
-# Set permissions
-sudo chmod -R 775 /var/www/ecvaultz/storage
-sudo chmod -R 775 /var/www/ecvaultz/bootstrap/cache
-
-# Create storage directories if needed
-sudo -u www-data mkdir -p /var/www/ecvaultz/storage/framework/views
-sudo -u www-data mkdir -p /var/www/ecvaultz/storage/framework/cache/data
-sudo -u www-data mkdir -p /var/www/ecvaultz/storage/app/private
-```
-
-### Step 7: Run Migrations & Optimize
-
-```bash
-# Run database migrations and seed
+# 5. Run migrations and optimize
 php artisan migrate --seed --force
-
-# Cache configuration for production
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-php artisan optimize
+
+# 6. Configure Nginx (see nginx config in docker/nginx/default.conf for reference)
+# 7. SSL: sudo certbot --nginx -d your-domain.com
+# 8. Queue worker: configure supervisor (see docker/supervisor/supervisord.conf)
+# 9. Scheduler: add cron: * * * * * php /var/www/ecvaultz/artisan schedule:run
 ```
 
-### Step 8: Configure PHP-FPM
+### Production `.env` Notes
 
-Edit `/etc/php/8.2/fpm/php.ini`:
-```ini
-# Security
-expose_php = Off
-display_errors = Off
-log_errors = On
-
-# Upload
-upload_max_filesize = 52M
-post_max_size = 52M
-max_execution_time = 300
-
-# Session
-session.cookie_secure = On
-session.cookie_httponly = On
-session.cookie_samesite = Lax
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.com
+FORCE_HTTPS=true          # Enable HTTPS URL generation for assets
+SESSION_SECURE_COOKIE=true
+HSTS_MAX_AGE=31536000
+SCAN_UPLOADS=true         # Enable ClamAV
+TRUSTED_PROXIES=*         # If behind Cloudflare/load balancer
 ```
-
-```bash
-sudo systemctl restart php8.2-fpm
-sudo systemctl enable php8.2-fpm
-```
-
-### Step 9: Configure Nginx
-
-Create `/etc/nginx/sites-available/ecvaultz`:
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    root /var/www/ecvaultz/public;
-
-    # Security headers
-    add_header X-Frame-Options "DENY" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-
-    # File upload limit
-    client_max_body_size 52M;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
-
-    # Main application
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    # Static assets (cached)
-    location /build/ {
-        access_log off;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        try_files $uri =404;
-    }
-
-    # PHP-FPM
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-        fastcgi_read_timeout 300;
-        fastcgi_buffers 16 16k;
-        fastcgi_buffer_size 32k;
-    }
-
-    # Block sensitive files
-    location ~ /\.(?!well-known).* { deny all; }
-    location ~ /(composer\.(json|lock)|package\.(json|lock)|\.env|README\.md|Dockerfile|docker-compose\.yml) { deny all; }
-    location ~ /(storage/logs|storage/framework|vendor) { deny all; }
-
-    # Deny access to storage directory
-    location /storage { deny all; }
-}
-```
-
-```bash
-# Enable site
-sudo ln -s /etc/nginx/sites-available/ecvaultz /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-
-# Test configuration
-sudo nginx -t
-
-# Reload Nginx
-sudo systemctl reload nginx
-sudo systemctl enable nginx
-```
-
-### Step 10: SSL with Let's Encrypt
-
-```bash
-# Obtain SSL certificate
-sudo certbot --nginx -d your-domain.com
-
-# Verify auto-renewal
-sudo certbot renew --dry-run
-```
-
-### Step 11: Configure Queue Worker (Supervisor)
-
-Create `/etc/supervisor/conf.d/ecvaultz-worker.conf`:
-
-```ini
-[program:ecvaultz-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/ecvaultz/artisan queue:work --queue=default --tries=3 --sleep=3 --timeout=300
-autostart=true
-autorestart=true
-stopasgroup=true
-killasgroup=true
-user=www-data
-numprocs=2
-redirect_stderr=true
-stdout_logfile=/var/www/ecvaultz/storage/logs/worker.log
-stopwaitsecs=3600
-```
-
-```bash
-sudo supervisorctl reread
-sudo supervisorctl update
-sudo supervisorctl start ecvaultz-worker:*
-```
-
-### Step 12: Configure Scheduler (Cron)
-
-```bash
-sudo crontab -u www-data -e
-```
-
-Add:
-```cron
-* * * * * php /var/www/ecvaultz/artisan schedule:run >> /dev/null 2>&1
-```
-
-### Step 13: Verify Deployment
-
-```bash
-# Check all services
-sudo systemctl status nginx php8.2-fpm mysql redis-server supervisor
-
-# Check application
-curl -I https://your-domain.com
-
-# Expected: HTTP/2 200
-```
-
-### Step 14: Post-Deployment Security Checklist
-
-- [ ] Change default admin password: `admin@ecvaultz.test`
-- [ ] Enable 2FA on admin account
-- [ ] Set `APP_DEBUG=false` in `.env`
-- [ ] Configure SMTP mail settings
-- [ ] Enable ClamAV: `SCAN_UPLOADS=true`
-- [ ] Set `TRUSTED_PROXIES=*` (behind Cloudflare/load balancer)
-- [ ] Verify SSL: https://www.ssllabs.com/ssltest/
-- [ ] Verify security headers: https://securityheaders.com/
-- [ ] Configure firewall: `sudo ufw allow 22/tcp && sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw enable`
-- [ ] Setup automated backups (database + storage)
-
----
-
-## 🐳 Docker Deployment
-
-For quick deployment using Docker Compose:
-
-```bash
-# Clone repository
-git clone https://github.com/your-username/ecvaultz.git
-cd ecvaultz
-
-# Configure environment
-cp .env.example .env
-# Edit .env with production values (see Step 5 above)
-
-# Start services
-docker compose up -d
-
-# Generate app key
-docker compose exec app php artisan key:generate
-
-# Run migrations
-docker compose exec app php artisan migrate --seed
-
-# Verify
-docker compose ps
-# Expected: app (Up), db (Up), redis (Up)
-```
-
-Services included:
-- **app:** PHP 8.2-FPM + Nginx + Supervisor (queue worker + scheduler)
-- **db:** MariaDB 10.11
-- **redis:** Redis 7 Alpine
-- **mailpit:** Email testing UI (dev profile only, port 8025)
-
-Access at `http://localhost:8080` (or configure reverse proxy for port 80/443).
 
 ---
 
@@ -554,37 +340,35 @@ Access at `http://localhost:8080` (or configure reverse proxy for port 80/443).
 | `APP_NAME` | Ecvaultz | Application name |
 | `APP_ENV` | production | `local`, `staging`, `production` |
 | `APP_DEBUG` | false | **MUST be false in production** |
-| `APP_URL` | http://localhost | Full application URL |
+| `APP_URL` | http://localhost:8080 | Full application URL |
 | `APP_KEY` | (required) | Generate: `php artisan key:generate` |
+| `ASSET_URL` | "" | Asset base URL (empty = relative paths) |
+| `FORCE_HTTPS` | false | Force HTTPS URL generation |
 
 ### Database
 | Variable | Default | Description |
 |---|---|---|
 | `DB_CONNECTION` | mariadb | `mariadb` or `mysql` |
-| `DB_HOST` | 127.0.0.1 | Database host |
+| `DB_HOST` | db | Database host |
 | `DB_PORT` | 3306 | Database port |
 | `DB_DATABASE` | ecvaultz | Database name |
-| `DB_USERNAME` | — | Database user |
-| `DB_PASSWORD` | — | Database password |
+| `DB_USERNAME` | ecvaultz | Database user |
+| `DB_PASSWORD` | ecvaultz_secret | Database password |
 
 ### Redis
 | Variable | Default | Description |
 |---|---|---|
-| `REDIS_HOST` | 127.0.0.1 | Redis host |
+| `REDIS_HOST` | redis | Redis host |
 | `REDIS_PORT` | 6379 | Redis port |
-| `REDIS_PASSWORD` | null | Redis password |
-| `REDIS_PREFIX` | ecvaultz_ | Key namespace prefix |
+| `REDIS_PASSWORD` | (empty) | Redis password |
 
 ### Mail
 | Variable | Default | Description |
 |---|---|---|
-| `MAIL_MAILER` | smtp | `smtp`, `log`, `mailgun`, `resend` |
-| `MAIL_HOST` | — | SMTP server hostname |
-| `MAIL_PORT` | 587 | SMTP port |
-| `MAIL_USERNAME` | — | SMTP username |
-| `MAIL_PASSWORD` | — | SMTP password |
-| `MAIL_ENCRYPTION` | tls | `tls`, `ssl`, or `null` |
-| `MAIL_FROM_ADDRESS` | — | Sender email address |
+| `MAIL_MAILER` | smtp | `smtp`, `log`, `mailgun` |
+| `MAIL_HOST` | mailpit | SMTP server hostname |
+| `MAIL_PORT` | 1025 | SMTP port |
+| `MAIL_FROM_ADDRESS` | noreply@ecvaultz.test | Sender email |
 
 ### Security
 | Variable | Default | Description |
@@ -599,11 +383,10 @@ Access at `http://localhost:8080` (or configure reverse proxy for port 80/443).
 | `ACCOUNT_LOCKOUT_MINUTES` | 15 | Lockout duration in minutes |
 | `SESSION_DRIVER` | database | `database` or `redis` |
 | `SESSION_LIFETIME` | 30 | Session lifetime (minutes) |
-| `SESSION_SECURE_COOKIE` | true | HTTPS-only cookies |
 | `SESSION_IDLE_TIMEOUT` | 1800 | Idle timeout (seconds) |
 | `SOFT_DELETE_RETENTION_DAYS` | 30 | Trash retention (days) |
-| `TRUSTED_PROXIES` | null | Proxy IPs (`*` behind LB) |
-| `HSTS_MAX_AGE` | 31536000 | HSTS duration (0=disable) |
+| `TRUSTED_PROXIES` | * | Proxy IPs (`*` behind LB, empty for none) |
+| `HSTS_MAX_AGE` | 0 | HSTS duration (0=disable, 31536000=production) |
 
 ### Rate Limiting
 | Variable | Default | Description |
@@ -619,47 +402,41 @@ Access at `http://localhost:8080` (or configure reverse proxy for port 80/443).
 ### Defense in Depth
 
 ```
-┌─────────────────────────────────────────────┐
-│              NETWORK LAYER                   │
-│  HTTPS (TLS 1.3) + HSTS + Trusted Proxies   │
-├─────────────────────────────────────────────┤
-│           APPLICATION LAYER                  │
-│  CSP + X-Frame-Options + CSRF + Rate Limits  │
-├─────────────────────────────────────────────┤
-│          AUTHENTICATION LAYER                │
-│  Password Policy + 2FA TOTP + Account Lockout│
-├─────────────────────────────────────────────┤
-│          AUTHORIZATION LAYER                 │
-│  Spatie RBAC (28 permissions) + Gates        │
-├─────────────────────────────────────────────┤
-│            DATA LAYER                        │
-│  AES-256-GCM Encryption + SHA-256 Checksums  │
-├─────────────────────────────────────────────┤
-│           STORAGE LAYER                      │
-│  Per-User Private Disk + Path Traversal Prot │
-├─────────────────────────────────────────────┤
-│           MONITORING LAYER                   │
-│  Complete Activity Audit Trail + Logging     │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                  NETWORK LAYER                           │
+│  HTTPS (TLS 1.3) + HSTS + Trusted Proxies               │
+├─────────────────────────────────────────────────────────┤
+│               APPLICATION LAYER                          │
+│  CSP + X-Frame-Options + CSRF + Rate Limits             │
+├─────────────────────────────────────────────────────────┤
+│              AUTHENTICATION LAYER                        │
+│  Password Policy + 2FA TOTP + HIBP + Account Lockout    │
+├─────────────────────────────────────────────────────────┤
+│              AUTHORIZATION LAYER                         │
+│  Spatie RBAC (28 permissions) + Gates + Policies        │
+├─────────────────────────────────────────────────────────┤
+│                DATA LAYER                                │
+│  AES-256-GCM Encryption + SHA-256 Checksums + Watermark │
+├─────────────────────────────────────────────────────────┤
+│               STORAGE LAYER                              │
+│  Per-User Private Disk + Path Traversal Protection      │
+├─────────────────────────────────────────────────────────┤
+│              MONITORING LAYER                            │
+│  Complete Activity Audit Trail + Per-File Audit         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### File Encryption Flow
 1. User registers → per-user 256-bit AES-256-GCM key generated
 2. Per-user key encrypted with `APP_KEY` via Laravel Crypt facade
-3. File uploaded → validated (extension + MIME finfo + size + ClamAV) → stored to private disk → SHA-256 checksum calculated → encrypted with per-user key
-4. File downloaded → authorization check → path traversal protection → decrypted on-the-fly → checksum verified → streamed to browser → temp file auto-cleaned
-
-### File Isolation
-Each user's files are stored in `storage/app/private/user_{id}/` with:
-- **Physical isolation** — separate directories per user
-- **Encryption isolation** — different encryption key per user
-- **Policy isolation** — FilePolicy enforces ownership checks
-- **Path protection** — realpath() validation prevents traversal attacks
+3. File uploaded → validated (extension + MIME finfo + size + ClamAV + quota check) → stored to private disk → SHA-256 checksum calculated → encrypted with per-user key
+4. File downloaded → authorization check → path traversal protection → decrypted on-the-fly → checksum verified → streamed to browser
+5. Shared file previewed → dynamic watermark applied (viewer email, timestamp, IP, "CONFIDENTIAL")
 
 ### Authentication Flow
-1. Login → credentials verified → rate limit check → lockout check
+1. Login → credentials verified → rate limit check → lockout check → HIBP password check
 2. 2FA enabled? → TOTP challenge (or 10-char recovery code)
-3. Session created → regenerated → `2fa.verified` flag set with idle timeout
+3. Session created → regenerated → `2fa.verified` flag with idle timeout
 4. Each request → RequireTwoFactor middleware verifies 2FA session
 
 ---
@@ -669,46 +446,61 @@ Each user's files are stored in `storage/app/private/user_{id}/` with:
 ```
 ecvaultz/
 ├── app/
-│   ├── Console/Commands/         # 3 Artisan commands (cleanup)
+│   ├── Console/
+│   │   ├── Commands/             # 5 Artisan commands (cleanup + notifications)
+│   │   └── Kernel.php            # Scheduled tasks
 │   ├── Http/
-│   │   ├── Controllers/          # 15+ controllers
-│   │   │   ├── Admin/            # Admin dashboard, user mgmt, settings
-│   │   │   └── Auth/             # Login, register, 2FA, password reset
-│   │   ├── Middleware/           # SecurityHeaders, Require2FA, CheckPermission
+│   │   ├── Controllers/
+│   │   │   ├── Admin/            # Dashboard, User Management, Settings, Activity Log
+│   │   │   ├── Auth/             # Login, Register, 2FA, Password Reset, Security Qs
+│   │   │   ├── DataRoomController.php
+│   │   │   ├── FileController.php
+│   │   │   ├── FileVersionController.php
+│   │   │   ├── FolderController.php
+│   │   │   ├── ShareController.php
+│   │   │   ├── TagController.php
+│   │   │   └── ProfileController.php
+│   │   ├── Middleware/           # SecurityHeaders, Require2FA, CheckPasswordExpiry
 │   │   └── Requests/             # Form request validation
 │   ├── Jobs/                     # ProcessFileUpload queue job
-│   ├── Mail/                     # AccountLockout, SecurityAlert mailables
-│   ├── Models/                   # 10 Eloquent models
+│   ├── Mail/                     # AccountLockout, SecurityAlert, FileShared, ShareAccessed
+│   ├── Models/                   # User, File, Folder, FileShare, FileVersion, ActivityLog,
+│   │                             #   Notification, SecurityQuestion, UserSetting,
+│   │                             #   LoginAttempt, Tag, SystemSetting, DataRoom
 │   ├── Policies/                 # FilePolicy, FolderPolicy
 │   ├── Providers/                # App, Auth, Route service providers
-│   └── Services/                 # 8 business logic services
-├── bootstrap/                    # Application bootstrap
-├── config/                       # 8 config files
+│   └── Services/                 # FileService, FileEncryptionService, FileValidationService,
+│                                 #   FileVersionService, SecurityService, AuthenticationService,
+│                                 #   TwoFactorService, SecurityQuestionService,
+│                                 #   NotificationService, WatermarkService,
+│                                 #   RecoveryKitService, HIBPService
+├── bootstrap/                    # Application bootstrap + cache
+├── config/                       # app, auth, database, cache, filesystems, session,
+│                                 #   permission, cors, security
 ├── database/
-│   ├── migrations/               # 12 migration files
+│   ├── migrations/               # 17 migration files
 │   └── seeders/                  # Role, admin, demo user seeders
-├── docker/                       # Nginx, PHP, Supervisor configs
-├── public/                       # Web root + PWA manifest
+├── docker/                       # Nginx, PHP (opcache), Supervisor configs + entrypoint
+├── public/                       # Web root, PWA manifest, service worker
 ├── resources/
-│   ├── css/app.css               # 280+ line design system
+│   ├── css/app.css               # Design system with custom properties
 │   ├── js/
-│   │   ├── Components/           # 10 reusable React components
-│   │   ├── Hooks/                # 4 custom React hooks
-│   │   ├── Layouts/              # 3 page layouts
-│   │   └── Pages/                # 28 Inertia.js pages
-│   └── views/app.blade.php       # Root Blade view
+│   │   ├── Components/           # 20+ reusable React components
+│   │   ├── Hooks/                # Custom React hooks (ThemeContext, etc.)
+│   │   ├── Layouts/              # AuthenticatedLayout, GuestLayout, AdminLayout
+│   │   └── Pages/                # 35+ Inertia.js pages
+│   └── views/                    # Blade views + email templates
 ├── routes/
-│   ├── web.php                   # 75+ web routes
+│   ├── web.php                   # 100+ web routes
 │   └── api.php                   # API routes (Sanctum)
 ├── storage/                      # Logs, cache, encrypted files
 ├── .env.example                  # Full environment template
 ├── Dockerfile                    # Multi-stage production build
 ├── docker-compose.yml            # 4-service orchestration
-├── doc-dev.md                    # Complete documentation (merged)
-├── doc-vuln.md                   # Security vulnerability assessment
-├── Rekomendasi-up.md             # 2000+ design/UI/UX recommendations
-├── tailwind.config.js            # 28 keyframes + design tokens
-└── vite.config.js                # Vite + React plugin
+├── report.txt                    # Competitive improvement report
+├── start.bat                     # Windows quick-start script
+├── tailwind.config.js            # Design tokens + animations
+└── vite.config.js                # Vite + React + Laravel plugin
 ```
 
 ---
@@ -729,20 +521,10 @@ ecvaultz/
 
 | Command | Schedule | Purpose |
 |---|---|---|
-| `ecvaultz:cleanup-expired-files` | Daily 02:00 | Permanently delete files past retention period |
-| `ecvaultz:cleanup-expired-shares` | Hourly | Remove expired share links |
-| `ecvaultz:cleanup-activity-logs --days=90` | Daily 03:00 | Purge activity logs older than 90 days |
-
----
-
-## 📚 Documentation Files
-
-| File | Content |
-|---|---|
-| `doc-dev.md` | Complete merged documentation: setup guide + project analysis + security audit + implementation results + design recommendations |
-| `doc-vuln.md` | 1001+ verified security vulnerabilities with CVSS scores and remediation |
-| `Rekomendasi-up.md` | 2000+ design, UI/UX, and animation upgrade recommendations |
-| `Cara-Jalankan.txt` | (Merged into doc-dev.md Section 1) |
+| `ecvaultz:cleanup-expired-files` | Daily | Soft-delete files past `expires_at` date |
+| `ecvaultz:cleanup-expired-shares` | Daily | Remove expired share links |
+| `ecvaultz:cleanup-activity-logs --days=90` | Daily | Purge activity logs older than 90 days |
+| `ecvaultz:send-pending-notifications` | Hourly | Process pending email notifications |
 
 ---
 
@@ -759,13 +541,22 @@ ecvaultz/
 | `php artisan up` | Disable maintenance mode |
 | `php artisan queue:work` | Process queue jobs |
 | `php artisan schedule:work` | Run scheduler (development) |
-| `php artisan tinker` | Interactive PHP REPL |
 | `php artisan route:list` | List all registered routes |
 | `php artisan migrate:status` | Check migration status |
+| `php artisan tinker` | Interactive PHP REPL |
 
 ---
 
 ## 🚨 Troubleshooting
+
+### White screen / CSS/JS not loading
+```bash
+# Check APP_URL scheme matches actual protocol (http vs https)
+docker compose exec app cat /var/www/.env | grep APP_URL
+# If using HTTP, ensure FORCE_HTTPS is not enabled
+```
+**Cause:** `URL::forceScheme('https')` in production with HTTP-only Docker setup.
+**Fix:** Set `FORCE_HTTPS=true` only when using actual SSL/TLS.
 
 ### "Please provide a valid cache path"
 ```bash
@@ -775,25 +566,23 @@ php artisan config:clear && php artisan view:clear
 
 ### Database connection refused
 ```bash
-# Check if MySQL is running
+# Docker: check if DB container is healthy
+docker compose ps
+
+# Local: check MySQL status
 sudo systemctl status mysql
-
-# Start if needed
-sudo systemctl start mysql
-
-# Verify connection
-mysql -u ecvaultz -p -e "SELECT 1"
 ```
 
 ### 404 on all routes except homepage
-```bash
-# Nginx: ensure try_files is configured (see Nginx config above)
-# Apache: enable mod_rewrite
-sudo a2enmod rewrite && sudo systemctl restart apache2
+Ensure Nginx `try_files` is configured:
+```nginx
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
 ```
 
 ### File upload fails
-- Check `MAX_UPLOAD_SIZE` in `.env`
+- Check `MAX_UPLOAD_SIZE` in `.env` (bytes)
 - Verify `upload_max_filesize` and `post_max_size` in `php.ini` (≥ 52M)
 - Check `client_max_body_size` in Nginx config (≥ 52M)
 
@@ -801,12 +590,6 @@ sudo a2enmod rewrite && sudo systemctl restart apache2
 ```bash
 sudo chown -R www-data:www-data storage bootstrap/cache
 sudo chmod -R 775 storage bootstrap/cache
-```
-
-### SSL certificate not renewing
-```bash
-sudo certbot renew --dry-run
-sudo systemctl status certbot.timer
 ```
 
 ---
@@ -822,7 +605,7 @@ sudo systemctl status certbot.timer
 
 ### Code Standards
 - **PHP:** PSR-12, strict type declarations, PHPDoc for public methods
-- **JavaScript:** ES6+, functional components with hooks, PropTypes
+- **JavaScript:** ES6+, functional components with hooks
 - **CSS:** Tailwind utility classes, custom components in `@layer components`
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `security:`)
 
@@ -861,11 +644,11 @@ We follow responsible disclosure and will respond within 48 hours.
 
 ## 📄 License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License.
 
 ---
 
 <p align="center">
   <b>Ecvaultz</b> — Your files. Your control. Our security.<br>
-  <sub>Protected by AES-256-GCM encryption. OWASP Top 10 compliant.</sub>
+  <sub>Protected by AES-256-GCM encryption. OWASP Top 10 compliant. PWA enabled.</sub>
 </p>

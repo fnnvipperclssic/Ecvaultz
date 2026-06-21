@@ -1,25 +1,31 @@
-# Dependencies
+# ============================================================
+# Ecvaultz — .gitignore
+# ============================================================
+
+# --- Dependencies ---
 /vendor
 /node_modules
 
-# Build artifacts
+# --- Build artifacts ---
 /public/build
 /public/storage
 /public/hot
 
-# Environment files
+# --- Environment files (CRITICAL: NEVER commit these) ---
 .env
 .env.backup
 .env.local
 .env.production
+.env.staging
+.env.*.local
 
-# SQLite databases
+# --- SQLite databases ---
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
 
-# Storage
+# --- Storage (encrypted user data — NEVER commit) ---
 /storage/*.key
 /storage/logs/*.log
 /storage/framework/cache/*
@@ -30,35 +36,61 @@
 /storage/app/public/*
 !storage/app/private/.gitkeep
 !storage/app/public/.gitkeep
+/storage/debugbar/
 
-# Cache & temp
+# --- Cache & temp ---
 .phpunit.result.cache
 .php-cs-fixer.cache
 /.phpunit.cache
 /tests/coverage
+/bootstrap/cache/*.php
+!bootstrap/cache/.gitkeep
 
-# Lock files (use composer install / npm ci)
-composer.lock
-package-lock.json
-
-# OS files
+# --- OS generated files ---
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 *.swp
 *.swo
 *.bak
 ~*
 
-# IDE
+# --- IDE & Editors ---
 .idea
 .vscode
 *.sublime-*
 *.code-workspace
+.project
+.settings/
+*.sublime-project
 
-# Project analysis (local only)
-analisis-project.md
+# --- Docker ---
+docker-compose.override.yml
 
-# Backup files
+# --- Project analysis (local only, large files) ---
+*.txt.backup
 docker-entrypoint.sh
 nginx.conf
-*.txt.backup
+
+# --- Backup & temp files ---
+*.backup
+*.old
+*.orig
+*.patch
+
+# --- Environment & secrets ---
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+credentials.json
+
+# --- Debug & profiling ---
+/xdebug-profile/
+/telescope-records/
+/clockwork/

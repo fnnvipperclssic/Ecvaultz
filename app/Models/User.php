@@ -26,6 +26,8 @@ class User extends Authenticatable
         'last_login_at',
         'last_login_ip',
         'password_changed_at',
+        'storage_quota',
+        'last_activity_at',
     ];
 
     protected $guarded = [
@@ -54,6 +56,8 @@ class User extends Authenticatable
         'recovery_codes' => 'encrypted:array',
         'google2fa_secret' => 'encrypted',
         'password' => 'hashed',
+        'storage_quota' => 'integer',
+        'last_activity_at' => 'datetime',
     ];
 
     public function files(): HasMany
@@ -155,5 +159,30 @@ class User extends Authenticatable
             'google2fa_secret' => null,
             'recovery_codes' => null,
         ])->save();
+    }
+
+    /**
+     * Get the total storage used by this user's files in bytes.
+     */
+    public function getStorageUsedAttribute(): int
+    {
+        return (int) $this->files()->sum('size');
+    }
+
+    /**
+     * Get the storage usage as a percentage of the quota.
+     */
+    public function getStorageUsedPercentAttribute(): float
+    {
+        if ($this->storage_quota <= 0) {
+            return 0.0;
+        }
+
+        return round(($this->storage_used / $this->storage_quota) * 100, 2);
+    }
+
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
     }
 }

@@ -15,10 +15,13 @@
  */
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DataRoomController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\FileVersionController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TagController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
@@ -78,6 +81,15 @@ Route::middleware('throttle:share-access')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Data Room Public Access (via invite access code, no auth required)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('throttle:share-access')->group(function () {
+    Route::match(['get', 'post'], 'data-room/access/{token}', [DataRoomController::class, 'accessRoom'])->name('datarooms.access');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Security Questions (public — password reset verification)
 |--------------------------------------------------------------------------
 */
@@ -124,6 +136,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('profile/account', [ProfileController::class, 'destroyAccount'])->name('profile.destroy');
     Route::post('profile/logout-others', [ProfileController::class, 'logoutOtherDevices'])->name('profile.logout-others');
 
+    // Recovery Kit (FEAT-13)
+    Route::get('profile/recovery-kit', [ProfileController::class, 'showRecoveryKit'])->name('profile.recovery-kit');
+    Route::get('profile/recovery-kit/download', [ProfileController::class, 'downloadRecoveryKit'])->name('profile.recovery-kit.download');
+
     // Logout
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
@@ -139,7 +155,8 @@ Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPassword
 
     // Files
     Route::get('files', [FileController::class, 'index'])->name('files.index');
-    Route::post('files', [FileController::class, 'store'])->name('files.store');
+    Route::post('files', [FileController::class, 'store'])->name('files.store')->middleware('throttle:upload');
+    Route::get('files/search', [FileController::class, 'search'])->name('files.search');
     Route::get('files/trash', [FileController::class, 'trash'])->name('files.trash');
     Route::get('files/{uuid}', [FileController::class, 'preview'])->name('files.preview');
     Route::get('files/{uuid}/download', [FileController::class, 'download'])->name('files.download');
@@ -149,6 +166,17 @@ Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPassword
     Route::post('files/{uuid}/restore', [FileController::class, 'restore'])->name('files.restore');
     Route::delete('files/{uuid}/force', [FileController::class, 'forceDelete'])->name('files.force-delete');
     Route::post('files/bulk', [FileController::class, 'bulkAction'])->name('files.bulk');
+    Route::post('files/{file}/favorite', [FileController::class, 'toggleFavorite'])->name('files.favorite');
+    Route::post('files/{file}/duplicate', [FileController::class, 'duplicate'])->name('files.duplicate');
+    Route::get('files/{file}/activity', [FileController::class, 'activity'])->name('files.activity');
+    Route::patch('files/{file}/description', [FileController::class, 'updateDescription'])->name('files.description');
+    Route::patch('files/{file}/expiry', [FileController::class, 'updateExpiry'])->name('files.expiry');
+    Route::get('files/{file}/watermarked-preview', [FileController::class, 'watermarkedPreview'])->name('files.watermarked-preview');
+    Route::post('files/{file}/tags', [TagController::class, 'attach'])->name('files.tags.attach');
+    Route::delete('files/{file}/tags/{tag}', [TagController::class, 'detach'])->name('files.tags.detach');
+
+    // Trash
+    Route::post('trash/empty', [FileController::class, 'emptyTrash'])->name('trash.empty');
 
     // Folders
     Route::post('folders', [FolderController::class, 'store'])->name('folders.store');
@@ -162,17 +190,35 @@ Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPassword
     Route::post('files/{fileUuid}/share', [ShareController::class, 'store']);
     Route::delete('shares/{shareUuid}', [ShareController::class, 'destroy'])->name('shares.destroy');
 
+    // Tags
+    Route::get('tags', [TagController::class, 'index'])->name('tags.index');
+    Route::post('tags', [TagController::class, 'store'])->name('tags.store');
+    Route::put('tags/{tag}', [TagController::class, 'update'])->name('tags.update');
+    Route::delete('tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
+
     // Activity Logs
     Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 
     // File Versions
-    Route::get('files/{uuid}/versions', [App\Http\Controllers\FileVersionController::class, 'index'])->name('files.versions');
-    Route::post('files/versions/{version}/restore', [App\Http\Controllers\FileVersionController::class, 'restore'])->name('files.versions.restore');
+    Route::get('files/{uuid}/versions', [FileVersionController::class, 'index'])->name('files.versions');
+    Route::post('files/versions/{version}/restore', [FileVersionController::class, 'restore'])->name('files.versions.restore');
+    Route::get('files/versions/{version}/diff', [FileVersionController::class, 'diff'])->name('files.versions.diff');
 
     // Notifications
     Route::get('notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::post('notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('notifications/read-all', [App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+
+    // Data Rooms (FEAT-12)
+    Route::get('data-rooms', [DataRoomController::class, 'index'])->name('datarooms.index');
+    Route::post('data-rooms', [DataRoomController::class, 'store'])->name('datarooms.store');
+    Route::get('data-rooms/{room}', [DataRoomController::class, 'show'])->name('datarooms.show');
+    Route::put('data-rooms/{room}', [DataRoomController::class, 'update'])->name('datarooms.update');
+    Route::delete('data-rooms/{room}', [DataRoomController::class, 'destroy'])->name('datarooms.destroy');
+    Route::post('data-rooms/{room}/files', [DataRoomController::class, 'addFile'])->name('datarooms.files.add');
+    Route::delete('data-rooms/{room}/files/{file}', [DataRoomController::class, 'removeFile'])->name('datarooms.files.remove');
+    Route::post('data-rooms/{room}/invites', [DataRoomController::class, 'inviteUser'])->name('datarooms.invites.store');
+    Route::delete('data-rooms/{room}/invites/{inviteId}', [DataRoomController::class, 'revokeInvite'])->name('datarooms.invites.revoke');
 
     // Secure avatar serving
     Route::get('secure/avatar/{user}', function (App\Models\User $user) {
@@ -194,7 +240,7 @@ Route::middleware(['auth', 'verified', '2fa', 'permission:admin.access'])->prefi
     Route::get('/users/{user}', [App\Http\Controllers\Admin\UserManagementController::class, 'show'])->name('users.show')->withTrashed();
     Route::get('/users/{user}/edit', [App\Http\Controllers\Admin\UserManagementController::class, 'edit'])->name('users.edit')->withTrashed();
     Route::patch('/users/{user}', [App\Http\Controllers\Admin\UserManagementController::class, 'update'])->name('users.update')->withTrashed();
-    Route::post('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'ban'])->name('users.ban');
+    Route::post('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'ban'])->name('users.ban')->withTrashed();
     Route::post('/users/{user}/unban', [App\Http\Controllers\Admin\UserManagementController::class, 'unban'])->name('users.unban')->withTrashed();
     Route::get('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings');
     Route::patch('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('settings.update');

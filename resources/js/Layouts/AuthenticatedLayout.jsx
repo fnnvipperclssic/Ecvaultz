@@ -1,12 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { useSnackbar } from 'notistack';
 import CommandPalette from '@/Components/CommandPalette';
+import GlobalSearch from '@/Components/GlobalSearch';
+import StorageQuotaBar from '@/Components/StorageQuotaBar';
+import KeyboardShortcuts from '@/Components/KeyboardShortcuts';
 
 export default function AuthenticatedLayout({ children, header }) {
-    const { auth, flash } = usePage().props;
+    const { auth, flash, storageUsed, storageQuota } = usePage().props;
     const { enqueueSnackbar } = useSnackbar();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [showShortcuts, setShowShortcuts] = useState(false);
+
+    // Listen for "?" key to open keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // "?" is Shift+/
+            if (e.key === '/' && e.shiftKey) {
+                // Only if not focused on an input/textarea
+                const tag = document.activeElement?.tagName?.toLowerCase();
+                if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
+                    e.preventDefault();
+                    setShowShortcuts(true);
+                }
+            }
+            // Space for preview (delegate to page if applicable)
+            if (e.key === ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const tag = document.activeElement?.tagName?.toLowerCase();
+                if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
+                    // Let individual pages handle it
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     React.useEffect(() => {
         if (flash?.success) enqueueSnackbar(flash.success, { variant: 'success' });
@@ -20,6 +48,7 @@ export default function AuthenticatedLayout({ children, header }) {
         { label: 'Shared', href: '/shares', icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z' },
         { label: 'Notifications', href: '/notifications', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
         { label: 'Trash', href: '/files/trash', icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' },
+        { label: 'Data Rooms', href: '/data-rooms', icon: 'M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z' },
         { label: 'Activity Log', href: '/activity-log', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
     ];
 
@@ -50,7 +79,7 @@ export default function AuthenticatedLayout({ children, header }) {
                     <span className="text-lg font-bold tracking-tight text-white">Ecvaultz</span>
                 </div>
 
-                <nav className="flex flex-1 flex-col justify-between p-4">
+                <nav className="flex flex-1 flex-col justify-between p-4" data-onboard="sidebar-nav">
                     <ul className="space-y-1">
                         {navItems.map((item) => (
                             <li key={item.href}>
@@ -87,6 +116,14 @@ export default function AuthenticatedLayout({ children, header }) {
                                 </Link>
                             </li>
                         ))}
+
+                        {/* Storage Quota (sidebar compact) */}
+                        {storageUsed !== undefined && storageQuota !== undefined && (
+                            <li className="px-0">
+                                <StorageQuotaBar used={storageUsed} quota={storageQuota} variant="compact" />
+                            </li>
+                        )}
+
                         <li>
                             <button onClick={() => router.post('/logout')}
                                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-surface-500 transition-colors hover:bg-red-500/10 hover:text-red-400">
@@ -113,18 +150,51 @@ export default function AuthenticatedLayout({ children, header }) {
                     <div className="flex flex-1 items-center justify-between">
                         <h1 className="text-lg font-semibold text-white">{header}</h1>
                         <div className="flex items-center gap-4">
+                            {/* Global Search in header */}
+                            <div className="hidden sm:block w-64">
+                                <GlobalSearch placeholder="Search..." />
+                            </div>
+
                             <Link href="/notifications" className="relative p-2 rounded-lg text-surface-500 hover:text-surface-700 hover:bg-surface-200 transition-colors">
                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                                 </svg>
                             </Link>
-                            <span className="text-sm text-surface-600 hidden sm:block">{auth?.user?.name}</span>
-                            {auth?.user?.avatar_url
-                                ? <img src={auth.user.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover ring-2 ring-surface-200" />
-                                : <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600/20 text-sm font-medium text-primary-400 ring-2 ring-primary-600/20">
-                                    {auth?.user?.name?.charAt(0)?.toUpperCase()}
+                            <div className="relative group" data-onboard="profile-menu">
+                                <button className="flex items-center gap-2 cursor-pointer" onClick={() => {}}>
+                                    <span className="text-sm text-surface-600 hidden sm:block">{auth?.user?.name}</span>
+                                    {auth?.user?.avatar_url
+                                        ? <img src={auth.user.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover ring-2 ring-surface-200" />
+                                        : <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600/20 text-sm font-medium text-primary-400 ring-2 ring-primary-600/20">
+                                            {auth?.user?.name?.charAt(0)?.toUpperCase()}
+                                        </div>
+                                    }
+                                </button>
+                                <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-surface-300 bg-surface-100/95 backdrop-blur-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all py-1">
+                                    <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm text-surface-700 hover:bg-surface-200/50">
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                        </svg>
+                                        Profile & Settings
+                                    </Link>
+                                    <button
+                                        onClick={() => setShowShortcuts(true)}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-surface-700 hover:bg-surface-200/50"
+                                    >
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                                        </svg>
+                                        Keyboard Shortcuts
+                                    </button>
+                                    <div className="mx-2 my-1 border-t border-surface-300" />
+                                    <button onClick={() => router.post('/logout')} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10">
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                        </svg>
+                                        Sign Out
+                                    </button>
                                 </div>
-                            }
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -134,6 +204,7 @@ export default function AuthenticatedLayout({ children, header }) {
                 </main>
             </div>
             <CommandPalette />
+            <KeyboardShortcuts isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
         </div>
     );
 }

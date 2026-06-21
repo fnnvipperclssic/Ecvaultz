@@ -8,6 +8,13 @@ import { ThemeProvider } from '@/Hooks/ThemeContext';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Ecvaultz';
 
+// Register service worker for PWA/offline support
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+        // Fail silently — app works without SW
+    });
+}
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(

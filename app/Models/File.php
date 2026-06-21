@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -19,6 +20,14 @@ class File extends Model
 {
     use SoftDeletes;
 
+    /**
+     * Get the route key for the model by UUID instead of auto-increment ID.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
     protected $fillable = [
         'uuid',
         'user_id',
@@ -32,13 +41,20 @@ class File extends Model
         'checksum_sha256',
         'download_count',
         'uploaded_at',
+        'is_favorited',
+        'description',
+        'expires_at',
+        'last_accessed_at',
     ];
 
     protected $casts = [
         'size' => 'integer',
         'is_encrypted' => 'boolean',
+        'is_favorited' => 'boolean',
         'download_count' => 'integer',
         'uploaded_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'last_accessed_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
@@ -74,6 +90,17 @@ class File extends Model
     public function versions(): HasMany
     {
         return $this->hasMany(FileVersion::class)->orderBy('version_number', 'desc');
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'file_tag', 'file_uuid', 'tag_id', 'uuid', 'id')
+            ->withTimestamps();
+    }
+
+    public function scopeFavorited($query): void
+    {
+        $query->where('is_favorited', true);
     }
 
     public function isOwnedBy(User $user): bool

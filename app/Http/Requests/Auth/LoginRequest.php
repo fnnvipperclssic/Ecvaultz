@@ -2,10 +2,15 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Mail\AccountLockoutMail;
+use App\Models\User;
 use App\Services\AuthenticationService;
+use App\Services\HIBPService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -51,6 +56,26 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        // Check password against HIBP breach database (k-anonymity model)
+        // This does not block login, only provides a warning
+        try {
+            $hibp = app(HIBPService::class);
+            $result = $hibp->checkPassword($this->input('password'));
+            if ($result['breached']) {
+                session()->flash('hibp_warning', $result['message']);
+                Log::info('User logged in with compromised password', [
+                    'user_id' => Auth::id(),
+                    'breach_count' => $result['count'],
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // HIBP check failure should not block login
+            Log::warning('HIBP check failed during login', [
+                'email' => $this->input('email'),
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function ensureIsNotRateLimited(): void
@@ -62,6 +87,23 @@ class LoginRequest extends FormRequest
         event(new Lockout($this));
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
+
+        // Send lockout email to user
+        try {
+            $user = User::where('email', $this->input('email'))->first();
+            if ($user) {
+                Mail::to($user->email)->send(new AccountLockoutMail(
+                    user: $user,
+                    failedAttempts: 5,
+                    lockoutMinutes: (int) ceil($seconds / 60),
+                ));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to send account lockout email', [
+                'email' => $this->input('email'),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', ['seconds' => $seconds, 'minutes' => ceil($seconds / 60)]),

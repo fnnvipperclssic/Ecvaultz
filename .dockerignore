@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment
+.env
+.env.*
+
+# Dependencies
+node_modules
+vendor
+
+# Storage & cache
+storage/app/private/*
+storage/app/public/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+storage/logs/*
+!storage/app/private/.gitkeep
+!storage/app/public/.gitkeep
+
+# Build artifacts
+public/build
+public/storage
+public/hot
+
+# IDE & OS
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+*.swp
+
+# Docs (keep README)
+analisis-project.md
+rekomendasi-dan-kekurangan.md
+Security-Inform.md
+Hasil-Project.md
+doc-dev.md
+doc-vuln.md
+Rekomendasi-up.md
+Cara-Jalankan.txt
+hasil.docx.md
+
+# Docker
+docker-compose.override.yml

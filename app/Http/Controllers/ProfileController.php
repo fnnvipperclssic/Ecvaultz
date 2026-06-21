@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\SecurityAlertMail;
 use App\Models\ActivityLog;
+use App\Models\User;
+use App\Services\HIBPService;
+use App\Services\RecoveryKitService;
 use App\Services\TwoFactorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -81,6 +87,43 @@ class ProfileController extends Controller
 
         ActivityLog::log($user->id, 'password_changed', $request->ip(), $request->userAgent());
 
+        // Send security alert email
+        try {
+            Mail::to($user->email)->send(new SecurityAlertMail(
+                user: $user,
+                alertType: 'password_changed',
+                details: [
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'time' => now()->toDateTimeString(),
+                ]
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send password changed email', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Check new password against HIBP breach database
+        try {
+            $hibp = app(HIBPService::class);
+            $result = $hibp->checkPassword($request->password);
+            if ($result['breached']) {
+                Log::warning('Password changed to a breached password', [
+                    'user_id' => $user->id,
+                    'breach_count' => $result['count'],
+                ]);
+                return back()->with('warning', 'Password updated. However, this password was found in ' . $result['count'] . ' known data breach(es). Consider changing it for better security.')
+                    ->with('success', 'Password updated. All other devices have been logged out.');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('HIBP check failed during password change', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return back()->with('success', 'Password updated. All other devices have been logged out.');
     }
 
@@ -150,6 +193,56 @@ class ProfileController extends Controller
         ActivityLog::log($user->id, 'logged_out_other_devices', $request->ip(), $request->userAgent());
 
         return back()->with('success', 'All other devices have been logged out.');
+    }
+
+    /**
+     * Show the recovery kit page with generated mnemonic words.
+     */
+    public function showRecoveryKit(Request $request): Response
+    {
+        $user = $request->user();
+
+        // Get or generate the user's encryption key
+        $encryptionService = app(\App\Services\FileEncryptionService::class);
+        $encryptionKey = $encryptionService->getUserKey($user);
+
+        // Generate mnemonic from the encryption key
+        $recoveryKit = app(RecoveryKitService::class);
+        $result = $recoveryKit->generateMnemonic($encryptionKey);
+
+        ActivityLog::log($user->id, 'recovery_kit_viewed', $request->ip(), $request->userAgent());
+
+        return Inertia::render('Profile/RecoveryKit', [
+            'words' => $result['words'],
+            'generatedAt' => now()->format('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /**
+     * Download the recovery kit as a PDF.
+     */
+    public function downloadRecoveryKit(Request $request): \Illuminate\Http\Response
+    {
+        $user = $request->user();
+
+        $encryptionService = app(\App\Services\FileEncryptionService::class);
+        $encryptionKey = $encryptionService->getUserKey($user);
+
+        $recoveryKit = app(RecoveryKitService::class);
+        $result = $recoveryKit->generateMnemonic($encryptionKey);
+        $pdfContent = $recoveryKit->generateRecoveryPDF($user, $result['words']);
+
+        ActivityLog::log($user->id, 'recovery_kit_downloaded', $request->ip(), $request->userAgent(), [
+            'action' => 'security_sensitive',
+        ]);
+
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="ecvaultz-recovery-kit-' . date('Y-m-d') . '.pdf"',
+            'Content-Length' => strlen($pdfContent),
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     protected function getActiveSessions(Request $request): array

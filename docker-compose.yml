@@ -1,5 +1,8 @@
+# Ecvaultz — Docker Compose (Windows / Linux / Mac)
+# Start: docker compose up -d
+# Stop:  docker compose down
+
 services:
-  # PHP + Nginx Application
   app:
     build:
       context: .
@@ -9,27 +12,32 @@ services:
     ports:
       - "8080:80"
     environment:
-      APP_NAME: "${APP_NAME:-Ecvaultz}"
-      APP_ENV: "${APP_ENV:-production}"
-      APP_DEBUG: "${APP_DEBUG:-false}"
-      APP_KEY: "${APP_KEY}"
-      APP_URL: "${APP_URL:-http://localhost:8080}"
-      DB_CONNECTION: mysql
+      APP_NAME: Ecvaultz
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8080
+      ASSET_URL: ""
+      APP_KEY: ${APP_KEY:-}
+      DB_CONNECTION: mariadb
       DB_HOST: db
       DB_PORT: 3306
-      DB_DATABASE: "${DB_DATABASE:-ecvaultz}"
-      DB_USERNAME: "${DB_USERNAME:-ecvaultz_user}"
-      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_DATABASE: ecvaultz
+      DB_USERNAME: ecvaultz
+      DB_PASSWORD: ecvaultz_secret
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
       SESSION_DRIVER: database
       CACHE_DRIVER: redis
+      QUEUE_CONNECTION: database
       FILESYSTEM_DISK: private
-      SCAN_UPLOADS: "${SCAN_UPLOADS:-false}"
-      MAIL_MAILER: "${MAIL_MAILER:-smtp}"
-      MAIL_HOST: "${MAIL_HOST:-mailpit}"
-      MAIL_PORT: "${MAIL_PORT:-1025}"
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      SCAN_UPLOADS: "false"
       TRUSTED_PROXIES: "*"
+      HSTS_MAX_AGE: "0"
+      TWO_FACTOR_REQUIRED: "false"
     volumes:
       - app-storage:/var/www/storage/app
     depends_on:
@@ -39,19 +47,25 @@ services:
         condition: service_started
     networks:
       - ecvaultz-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # MariaDB Database
   db:
     image: mariadb:10.11
     container_name: ecvaultz-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-root_password}"
-      MYSQL_DATABASE: "${DB_DATABASE:-ecvaultz}"
-      MYSQL_USER: "${DB_USERNAME:-ecvaultz_user}"
-      MYSQL_PASSWORD: "${DB_PASSWORD:-ecvaultz_pass}"
+      MARIADB_ROOT_PASSWORD: root_secret_change_me
+      MARIADB_DATABASE: ecvaultz
+      MARIADB_USER: ecvaultz
+      MARIADB_PASSWORD: ecvaultz_secret
     volumes:
       - db-data:/var/lib/mysql
+    ports:
+      - "3307:3306"
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -60,29 +74,25 @@ services:
     networks:
       - ecvaultz-net
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: ecvaultz-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:-null}"
+    command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
     networks:
       - ecvaultz-net
 
-  # Mailpit (Email testing - dev only)
   mailpit:
     image: axllent/mailpit:latest
     container_name: ecvaultz-mailpit
     restart: unless-stopped
     ports:
-      - "8025:8025"  # Web UI
-      - "1025:1025"  # SMTP
+      - "8025:8025"
+      - "1025:1025"
     networks:
       - ecvaultz-net
-    profiles:
-      - dev
 
 networks:
   ecvaultz-net:

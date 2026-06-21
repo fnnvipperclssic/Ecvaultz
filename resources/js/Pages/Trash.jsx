@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ConfirmModal from '@/Components/ConfirmModal';
 
 export default function Trash({ files, retentionDays }) {
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
 
     const toggleSelectAll = (e) => {
         if (e.target.checked) {
@@ -51,9 +54,53 @@ export default function Trash({ files, retentionDays }) {
         }, { preserveScroll: true, onSuccess: () => setSelectedFiles([]) });
     };
 
+    const handleEmptyTrash = (password) => {
+        if (!password) return;
+        router.delete('/trash/empty', {
+            data: { password },
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowEmptyTrashModal(false);
+            },
+        });
+    };
+
+    // Filter files by search query
+    const filteredFiles = files?.data?.filter((file) => {
+        if (!searchQuery.trim()) return true;
+        return file.name.toLowerCase().includes(searchQuery.toLowerCase());
+    }) || [];
+
     return (
         <AuthenticatedLayout header="Trash">
             <div className="px-6 py-6">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex-1 min-w-[200px] max-w-md">
+                        <div className="relative">
+                            <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search trashed files..."
+                                className="input pl-10"
+                            />
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowEmptyTrashModal(true)}
+                        className="btn-danger text-sm"
+                        disabled={!files?.data?.length}
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Empty Trash
+                    </button>
+                </div>
+
                 <div className="mb-4 rounded-lg bg-amber-500/10 border border-amber-200 p-3">
                     <p className="text-sm text-amber-700">
                         Files in trash will be automatically deleted after {retentionDays} days.
@@ -73,7 +120,7 @@ export default function Trash({ files, retentionDays }) {
                 )}
 
                 <div className="card overflow-hidden !p-0">
-                    {files?.data?.length > 0 ? (
+                    {filteredFiles.length > 0 ? (
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-surface-200 bg-surface-50">
@@ -93,7 +140,7 @@ export default function Trash({ files, retentionDays }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-surface-100">
-                                {files.data.map((file) => (
+                                {filteredFiles.map((file) => (
                                     <tr key={file.uuid} className="hover:bg-surface-50 transition-colors">
                                         <td className="px-4 py-3">
                                             <input
@@ -115,7 +162,7 @@ export default function Trash({ files, retentionDays }) {
                                         <td className="table-cell text-surface-500">{file.deleted_at_human}</td>
                                         <td className="table-cell hidden lg:table-cell">
                                             <span className={`badge ${file.days_until_permanent <= 3 ? 'badge-danger' : file.days_until_permanent <= 7 ? 'badge-warning' : 'badge-info'}`}>
-                                                {file.days_until_permanent}d
+                                                {file.days_until_permanent}d until deletion
                                             </span>
                                         </td>
                                         <td className="py-3 pr-4">
@@ -137,7 +184,9 @@ export default function Trash({ files, retentionDays }) {
                             <svg className="h-12 w-12 text-surface-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                            <p className="mt-3 text-sm text-surface-500">Trash is empty</p>
+                            <p className="mt-3 text-sm text-surface-500">
+                                {searchQuery ? 'No files matching your search' : 'Trash is empty'}
+                            </p>
                             <Link href="/files" className="mt-2 text-sm text-primary-600 hover:text-primary-700">
                                 Back to files
                             </Link>
@@ -145,6 +194,18 @@ export default function Trash({ files, retentionDays }) {
                     )}
                 </div>
             </div>
+
+            {/* Empty Trash Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showEmptyTrashModal}
+                onClose={() => setShowEmptyTrashModal(false)}
+                title="Empty Trash"
+                message="Are you sure you want to permanently delete all files in the trash? This action cannot be undone."
+                confirmText="Empty Trash"
+                action="/trash/empty"
+                method="DELETE"
+                requirePassword={true}
+            />
         </AuthenticatedLayout>
     );
 }

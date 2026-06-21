@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\FileSharedMail;
+use App\Mail\ShareAccessedMail;
 use App\Models\File;
 use App\Models\FileShare;
 use App\Models\ActivityLog;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -150,6 +155,40 @@ class ShareController extends Controller
             ]
         );
 
+        // Send notification to the recipient for internal shares
+        if ($request->type === 'internal' && isset($sharedWith)) {
+            try {
+                $notificationService = app(NotificationService::class);
+                $notificationService->notifyFileShared(
+                    sender: $request->user(),
+                    recipient: $sharedWith,
+                    fileName: $file->original_name,
+                    permission: $request->permission,
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Failed to send file shared notification', [
+                    'file_uuid' => $file->uuid,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // Send email notification
+            try {
+                Mail::to($sharedWith->email)->send(new FileSharedMail(
+                    sharer: $request->user(),
+                    recipient: $sharedWith,
+                    file: $file,
+                    shareUrl: route('dashboard'),
+                ));
+            } catch (\Throwable $e) {
+                Log::warning('Failed to send file shared email', [
+                    'file_uuid' => $file->uuid,
+                    'recipient' => $sharedWith->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         $message = $request->type === 'external'
             ? 'Share link generated successfully.'
             : 'File shared with ' . $request->email;
@@ -273,6 +312,24 @@ class ShareController extends Controller
 
         $file->increment('download_count');
         $share->recordAccess();
+
+        // Send access notification to the file owner
+        try {
+            $owner = $share->sharedBy;
+            $accessorEmail = $share->external_email ?? 'unknown';
+            Mail::to($owner->email)->send(new ShareAccessedMail(
+                owner: $owner,
+                file: $file,
+                accessorEmail: $accessorEmail,
+                accessorIp: $request->ip(),
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send share accessed email', [
+                'file_uuid' => $file->uuid,
+                'share_uuid' => $share->uuid,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->download($decryptedPath, $file->original_name, [
             'Content-Type' => $file->mime_type,
