@@ -14,12 +14,16 @@ export function ThemeProvider({ children }) {
 
     const applyTheme = useCallback((t) => {
         const root = document.documentElement;
+        const body = document.body;
         root.setAttribute('data-theme', t);
-        // Also toggle Tailwind dark class for dark: variants
+        body.setAttribute('data-theme', t);
+        // Toggle Tailwind dark class for dark: variants
         if (t === 'dark') {
             root.classList.add('dark');
+            body.classList.add('dark');
         } else {
             root.classList.remove('dark');
+            body.classList.remove('dark');
         }
     }, []);
 
