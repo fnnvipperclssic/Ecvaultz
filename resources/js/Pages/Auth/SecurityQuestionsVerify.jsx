@@ -4,7 +4,7 @@ import GuestLayout from '@/Layouts/GuestLayout';
 
 export default function SecurityQuestionsVerify({ email, questions }) {
     const [answers, setAnswers] = useState({});
-    const { post, processing, errors } = useForm();
+    const { post, processing } = useForm();
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -56,11 +56,7 @@ export default function SecurityQuestionsVerify({ email, questions }) {
                     </button>
                 </form>
 
-                <div className="mt-4 text-center">
-                    <a href="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700">
-                        Use email verification instead
-                    </a>
-                </div>
+                {/* Email verification path REMOVED — security questions are the ONLY reset method (OWASP A07) */}
             </div>
         </GuestLayout>
     );

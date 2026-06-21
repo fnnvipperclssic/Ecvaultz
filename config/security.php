@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'default_storage_quota' => (int) env('DEFAULT_STORAGE_QUOTA', 5368709120), // 5GB
     'max_upload_size' => (int) env('MAX_UPLOAD_SIZE', 52428800),
     'allowed_extensions' => explode(',', env('ALLOWED_EXTENSIONS', 'pdf,docx,xlsx,jpg,png,7z')),
     'allowed_mimes' => [

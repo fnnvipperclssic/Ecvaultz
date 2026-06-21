@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 const PREDEFINED_QUESTIONS = [
@@ -17,10 +17,10 @@ const PREDEFINED_QUESTIONS = [
 
 export default function SecurityQuestions({ predefinedQuestions, existingQuestions, hasQuestions }) {
     const [questions, setQuestions] = useState([
-        { question: '', answer: '' },
-        { question: '', answer: '' },
+        { question: '', answer: '', customQuestion: '' },
+        { question: '', answer: '', customQuestion: '' },
     ]);
-    const { data, setData, post, processing, errors } = useForm();
+    const { data, setData, post, processing } = useForm();
 
     const addQuestion = () => {
         if (questions.length < 5) {
@@ -35,9 +35,24 @@ export default function SecurityQuestions({ predefinedQuestions, existingQuestio
     };
 
     const updateQuestion = (index, field, value) => {
-        const updated = questions.map((q, i) =>
-            i === index ? { ...q, [field]: value } : q
-        );
+        const updated = questions.map((q, i) => {
+            if (i !== index) return q;
+            const next = { ...q, [field]: value };
+
+            // When user selects 'custom' from dropdown, clear the question value
+            // so the custom question text input can set it on blur
+            if (field === 'question' && value === 'custom') {
+                next.question = '';
+            }
+
+            // When user types in custom question input and blurs, store as question
+            if (field === 'customQuestion' && value !== '') {
+                next.question = value;
+                next.customQuestion = value;
+            }
+
+            return next;
+        });
         setQuestions(updated);
         setData('questions', updated);
     };
@@ -107,12 +122,16 @@ export default function SecurityQuestions({ predefinedQuestions, existingQuestio
                                         <option key={i} value={opt}>{opt}</option>
                                     ))}
                                 </select>
-                                {q.question === 'custom' && (
+                                {q.question === '' && q.customQuestion !== undefined && (
                                     <input
                                         type="text"
-                                        value={q.question === 'custom' ? q.customQuestion || '' : ''}
+                                        value={q.customQuestion}
                                         onChange={(e) => updateQuestion(index, 'customQuestion', e.target.value)}
-                                        onBlur={(e) => updateQuestion(index, 'question', e.target.value)}
+                                        onBlur={(e) => {
+                                            if (e.target.value.trim()) {
+                                                updateQuestion(index, 'question', e.target.value.trim());
+                                            }
+                                        }}
                                         placeholder="Enter your custom question..."
                                         className="input mb-3 w-full"
                                         required

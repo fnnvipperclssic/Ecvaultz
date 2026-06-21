@@ -11,6 +11,7 @@ export default function AuthenticatedLayout({ children, header }) {
     const { enqueueSnackbar } = useSnackbar();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showShortcuts, setShowShortcuts] = useState(false);
+    const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
     // Listen for "?" key to open keyboard shortcuts
     useEffect(() => {
@@ -24,13 +25,7 @@ export default function AuthenticatedLayout({ children, header }) {
                     setShowShortcuts(true);
                 }
             }
-            // Space for preview (delegate to page if applicable)
-            if (e.key === ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                const tag = document.activeElement?.tagName?.toLowerCase();
-                if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
-                    // Let individual pages handle it
-                }
-            }
+            // Space hotkey is delegated to individual pages via their own handlers
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -160,8 +155,12 @@ export default function AuthenticatedLayout({ children, header }) {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                                 </svg>
                             </Link>
-                            <div className="relative group" data-onboard="profile-menu">
-                                <button className="flex items-center gap-2 cursor-pointer" onClick={() => {}}>
+                            <div className="relative" data-onboard="profile-menu">
+                                <button
+                                    className="flex items-center gap-2 cursor-pointer rounded-lg p-1.5 hover:bg-surface-200 transition-colors"
+                                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                                    onBlur={() => setTimeout(() => setProfileMenuOpen(false), 150)}
+                                >
                                     <span className="text-sm text-surface-600 hidden sm:block">{auth?.user?.name}</span>
                                     {auth?.user?.avatar_url
                                         ? <img src={auth.user.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover ring-2 ring-surface-200" />
@@ -169,31 +168,48 @@ export default function AuthenticatedLayout({ children, header }) {
                                             {auth?.user?.name?.charAt(0)?.toUpperCase()}
                                         </div>
                                     }
+                                    <svg className={`h-4 w-4 text-surface-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
                                 </button>
-                                <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-surface-300 bg-surface-100/95 backdrop-blur-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all py-1">
-                                    <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm text-surface-700 hover:bg-surface-200/50">
-                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                                        </svg>
-                                        Profile & Settings
-                                    </Link>
-                                    <button
-                                        onClick={() => setShowShortcuts(true)}
-                                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-surface-700 hover:bg-surface-200/50"
-                                    >
-                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
-                                        </svg>
-                                        Keyboard Shortcuts
-                                    </button>
-                                    <div className="mx-2 my-1 border-t border-surface-300" />
-                                    <button onClick={() => router.post('/logout')} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10">
-                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                        </svg>
-                                        Sign Out
-                                    </button>
-                                </div>
+                                {profileMenuOpen && (
+                                    <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-surface-300 bg-surface-100 shadow-elevation-3 py-1">
+                                        <div className="px-3 py-2 border-b border-surface-300">
+                                            <p className="text-sm font-medium text-white">{auth?.user?.name}</p>
+                                            <p className="text-xs text-surface-500 truncate">{auth?.user?.email}</p>
+                                        </div>
+                                        <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 text-sm text-surface-600 hover:bg-surface-200 hover:text-surface-800 transition-colors">
+                                            <svg className="h-4 w-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                            </svg>
+                                            Profile & Settings
+                                        </Link>
+                                        <button
+                                            onClick={() => { setShowShortcuts(true); setProfileMenuOpen(false); }}
+                                            className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-surface-600 hover:bg-surface-200 hover:text-surface-800 transition-colors"
+                                        >
+                                            <svg className="h-4 w-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                                            </svg>
+                                            Keyboard Shortcuts
+                                        </button>
+                                        {auth?.user?.is_admin && (
+                                            <Link href="/admin/dashboard" className="flex items-center gap-3 px-3 py-2.5 text-sm text-surface-600 hover:bg-surface-200 hover:text-surface-800 transition-colors">
+                                                <svg className="h-4 w-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                                </svg>
+                                                Admin Panel
+                                            </Link>
+                                        )}
+                                        <div className="mx-3 my-1 border-t border-surface-300" />
+                                        <button onClick={() => router.post('/logout')} className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors">
+                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Sign Out
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

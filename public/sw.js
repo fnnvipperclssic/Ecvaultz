@@ -33,18 +33,18 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch: network-first with cache fallback
+// Fetch: ONLY cache static build assets — never intercept navigation/API/Inertia requests
 self.addEventListener('fetch', (event) => {
-    // Skip non-GET requests and API calls
+    const url = new URL(event.request.url);
+
+    // Only handle GET requests for static build assets (CSS/JS/images)
     if (event.request.method !== 'GET') return;
-    if (event.request.url.includes('/api/')) return;
-    if (event.request.url.includes('/secure/')) return;
-    if (event.request.url.includes('/2fa/')) return;
+    if (!url.pathname.startsWith('/build/assets/')) return;
 
     event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                // Cache successful responses
+        caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return fetch(event.request).then((response) => {
                 if (response.status === 200) {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
@@ -52,12 +52,8 @@ self.addEventListener('fetch', (event) => {
                     });
                 }
                 return response;
-            })
-            .catch(() => {
-                return caches.match(event.request).then((cached) => {
-                    return cached || caches.match('/offline');
-                });
-            })
+            });
+        })
     );
 });
 

@@ -52,9 +52,23 @@ Route::middleware('guest')->group(function () {
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('register', [RegisteredUserController::class, 'store']);
+
+    /**
+     * Password Reset — Security Questions Only (OWASP A07)
+     *
+     * Flow: GET forgot-password (input email) → POST forgot-password (lookup user,
+     * redirect to security questions if configured) → GET password/security-questions
+     * (show 2 random questions) → POST security-questions/verify (verify answers,
+     * generate HMAC session token) → GET reset-password (show new password form,
+     * verifies session token) → POST reset-password (update password, terminate
+     * other sessions).
+     *
+     * Tidak ada email link — token disimpan di server-side session.
+     */
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.lookup');
+    // reset-password TANPA {token} URL parameter — token ada di session
+    Route::get('reset-password', [NewPasswordController::class, 'create'])->name('password.reset');
     Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.update');
 });
 
@@ -149,7 +163,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 | Main Application (auth + verified + 2FA + password expiry check)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPasswordExpiry::class])->group(function () {
+Route::middleware(['auth', 'verified', '2fa', 'password.expiry', 'security.setup'])->group(function () {
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -234,16 +248,58 @@ Route::middleware(['auth', 'verified', '2fa', \App\Http\Middleware\CheckPassword
 | Admin Panel (auth + 2FA + admin.access permission required)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', '2fa', 'permission:admin.access'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', '2fa', 'password.expiry', 'security.setup', 'permission:admin.access', 'throttle:60,1'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard
     Route::get('/dashboard', [App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
+
+    // Users (existing — CRUD + ban/unban)
     Route::get('/users', [App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('users.index');
     Route::get('/users/{user}', [App\Http\Controllers\Admin\UserManagementController::class, 'show'])->name('users.show')->withTrashed();
     Route::get('/users/{user}/edit', [App\Http\Controllers\Admin\UserManagementController::class, 'edit'])->name('users.edit')->withTrashed();
     Route::patch('/users/{user}', [App\Http\Controllers\Admin\UserManagementController::class, 'update'])->name('users.update')->withTrashed();
     Route::post('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'ban'])->name('users.ban')->withTrashed();
     Route::post('/users/{user}/unban', [App\Http\Controllers\Admin\UserManagementController::class, 'unban'])->name('users.unban')->withTrashed();
+
+    // Files (NEW — admin CRUD)
+    Route::get('/files', [App\Http\Controllers\Admin\FileAdminController::class, 'index'])->name('files.index');
+    Route::get('/files/{file}', [App\Http\Controllers\Admin\FileAdminController::class, 'show'])->name('files.show')->withTrashed();
+    Route::delete('/files/{file}', [App\Http\Controllers\Admin\FileAdminController::class, 'destroy'])->name('files.destroy')->withTrashed();
+
+    // Folders (NEW — admin CRUD)
+    Route::get('/folders', [App\Http\Controllers\Admin\FolderAdminController::class, 'index'])->name('folders.index');
+    Route::delete('/folders/{folder}', [App\Http\Controllers\Admin\FolderAdminController::class, 'destroy'])->name('folders.destroy');
+
+    // Shares (NEW — admin CRUD)
+    Route::get('/shares', [App\Http\Controllers\Admin\ShareAdminController::class, 'index'])->name('shares.index');
+    Route::delete('/shares/{share}', [App\Http\Controllers\Admin\ShareAdminController::class, 'destroy'])->name('shares.destroy');
+
+    // Tags (NEW — admin CRUD)
+    Route::get('/tags', [App\Http\Controllers\Admin\TagAdminController::class, 'index'])->name('tags.index');
+    Route::delete('/tags/{tag}', [App\Http\Controllers\Admin\TagAdminController::class, 'destroy'])->name('tags.destroy');
+
+    // Data Rooms (NEW — admin CRUD)
+    Route::get('/data-rooms', [App\Http\Controllers\Admin\DataRoomAdminController::class, 'index'])->name('data-rooms.index');
+    Route::get('/data-rooms/{dataRoom}', [App\Http\Controllers\Admin\DataRoomAdminController::class, 'show'])->name('data-rooms.show');
+    Route::delete('/data-rooms/{dataRoom}', [App\Http\Controllers\Admin\DataRoomAdminController::class, 'destroy'])->name('data-rooms.destroy');
+
+    // Login Attempts (NEW — admin view)
+    Route::get('/login-attempts', [App\Http\Controllers\Admin\LoginAttemptAdminController::class, 'index'])->name('login-attempts.index');
+
+    // Security Questions (NEW — admin view)
+    Route::get('/security-questions', [App\Http\Controllers\Admin\SecurityQuestionAdminController::class, 'index'])->name('security-questions.index');
+
+    // Notifications (NEW — admin CRUD)
+    Route::get('/notifications', [App\Http\Controllers\Admin\NotificationAdminController::class, 'index'])->name('notifications.index');
+    Route::delete('/notifications/{notification}', [App\Http\Controllers\Admin\NotificationAdminController::class, 'destroy'])->name('notifications.destroy');
+
+    // File Versions (NEW — admin view)
+    Route::get('/file-versions', [App\Http\Controllers\Admin\FileVersionAdminController::class, 'index'])->name('file-versions.index');
+
+    // Settings (existing)
     Route::get('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings');
     Route::patch('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('settings.update');
+
+    // Activity Log (existing)
     Route::get('/activity-log', [App\Http\Controllers\Admin\ActivityLogAdminController::class, 'index'])->name('activity-log');
     Route::get('/activity-log/export', [App\Http\Controllers\Admin\ActivityLogAdminController::class, 'export'])->name('activity-log.export');
 });

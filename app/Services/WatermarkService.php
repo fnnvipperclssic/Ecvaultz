@@ -132,102 +132,21 @@ class WatermarkService
     }
 
     /**
-     * Apply watermark to a PDF by prepending a text overlay page.
+     * Apply watermark to a PDF.
      *
-     * Uses a basic PDF manipulation approach — appends the watermark as
-     * text annotations on each page using raw PDF operations.
-     * For production, consider using a dedicated PDF library (FPDI, mPDF, etc.).
+     * PDF watermarking requires a dedicated library (FPDI, mPDF, TCPDF, etc.)
+     * for proper implementation. For now, PDFs are returned unmodified since
+     * the raw-PDF approach produced structurally invalid files.
+     *
+     * TODO: Integrate a PDF library for proper watermark overlay on PDF files.
      */
     protected function watermarkPdf(string $filePath, string $text): string
     {
-        // For PDFs, we create a simple overlay PDF and return the original
-        // with a note that full PDF watermarking requires a PDF library.
-        // This is a basic implementation that prepends a watermark page.
+        Log::info('PDF watermarking: returning original (library required for proper PDF watermarking)', [
+            'path' => $filePath,
+        ]);
 
-        $tempPath = tempnam(sys_get_temp_dir(), 'ecvaultz_wm_pdf_') . '.pdf';
-
-        // Attempt to use basic PDF manipulation
-        try {
-            $pdfContent = file_get_contents($filePath);
-            if ($pdfContent === false) {
-                return $filePath;
-            }
-
-            // Generate a watermark overlay using FPDF-style manual PDF creation
-            $watermarkPage = $this->generateWatermarkPdfPage($text);
-
-            // Simple approach: create a new PDF that embeds the original
-            // by wrapping it with watermark annotations
-            // Note: This is a simplified approach — full PDF watermarking
-            // would require a PDF manipulation library
-            $combined = $this->createWatermarkedPdf($filePath, $text);
-            file_put_contents($tempPath, $combined);
-
-            return $tempPath;
-        } catch (\Throwable $e) {
-            Log::warning('PDF watermarking failed, returning original', [
-                'error' => $e->getMessage(),
-            ]);
-            return $filePath;
-        }
-    }
-
-    /**
-     * Create a simple watermarked PDF by wrapping the original content.
-     */
-    protected function createWatermarkedPdf(string $originalPath, string $watermarkText): string
-    {
-        $originalContent = base64_encode(file_get_contents($originalPath));
-
-        $pdf = "%PDF-1.4\n";
-        $pdf .= "1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n";
-        $pdf .= "2 0 obj\n<</Type /Pages /Kids [3 0 R 5 0 R] /Count 2>>\nendobj\n";
-
-        // Page 1: Watermark notice page
-        $pdf .= "3 0 obj\n<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]
-            /Contents 4 0 R /Resources<</Font<</F1 7 0 R>>>>>>\nendobj\n";
-        $watermarkContent = $this->pdfTextContent(4, $watermarkText);
-        $pdf .= $watermarkContent;
-
-        // Page 2: Original PDF embedded as image (simplified)
-        $pdf .= "5 0 obj\n<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]
-            /Contents 6 0 R>>\nendobj\n";
-        $pdf .= "6 0 obj\n<</Length 44>>stream\n";
-        $pdf .= "BT /F1 12 Tf 50 700 Td (Watermarked Original) Tj ET\n";
-        $pdf .= "endstream\nendobj\n";
-
-        // Font definition
-        $pdf .= "7 0 obj\n<</Type /Font /Subtype /Type1 /BaseFont /Helvetica>>\nendobj\n";
-
-        // Cross-reference table
-        $offset = strlen($pdf);
-        $pdf .= "xref\n0 8\n0000000000 65535 f \n";
-        $pdf .= sprintf("%010d 00000 n \n", 0);
-        $pdf .= sprintf("%010d 00000 n \n", strlen("1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n"));
-        $pdf .= sprintf("%010d 00000 n \n", strlen("1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n"
-            . "2 0 obj\n<</Type /Pages /Kids [3 0 R 5 0 R] /Count 2>>\nendobj\n"));
-        $pdf .= sprintf("%010d 00000 n \n", 0); // simplified offset calculation
-        $pdf .= sprintf("%010d 00000 n \n", 0);
-        $pdf .= sprintf("%010d 00000 n \n", 0);
-        $pdf .= sprintf("%010d 00000 n \n", 0);
-
-        $pdf .= "trailer\n<</Size 8 /Root 1 0 R>>\n";
-        $pdf .= "startxref\n{$offset}\n%%EOF\n";
-
-        return $pdf;
-    }
-
-    /**
-     * Generate PDF text content stream.
-     */
-    protected function pdfTextContent(int $objNum, string $text): string
-    {
-        $escaped = $this->escapePdfString($text);
-        $stream = "BT /F1 14 Tf 50 700 Td ({$escaped}) Tj ET\n";
-        $stream .= "BT /F1 10 Tf 50 680 Td (This document contains confidential information.) Tj ET\n";
-        $stream .= "BT /F1 10 Tf 50 660 Td (Unauthorized distribution is prohibited.) Tj ET\n";
-
-        return "{$objNum} 0 obj\n<</Length " . strlen($stream) . ">>stream\n{$stream}\nendstream\nendobj\n";
+        return $filePath;
     }
 
     /**
@@ -239,36 +158,5 @@ class WatermarkService
         $value = str_replace('(', '\\(', $value);
         $value = str_replace(')', '\\)', $value);
         return $value;
-    }
-
-    /**
-     * Generate a simple watermark page PDF.
-     */
-    protected function generateWatermarkPdfPage(string $text): string
-    {
-        $escaped = $this->escapePdfString($text);
-        return <<<PDF
-%PDF-1.4
-1 0 obj<</Type /Catalog /Pages 2 0 R>>endobj
-2 0 obj<</Type /Pages /Kids [3 0 R] /Count 1>>endobj
-3 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources<</Font<</F1 5 0 R>>>>>>endobj
-4 0 obj<</Length 72>>stream
-BT /F1 48 Tf 100 400 Td ({$escaped}) Tj ET
-endstream
-endobj
-5 0 obj<</Type /Font /Subtype /Type1 /BaseFont /Helvetica>>endobj
-xref
-0 6
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000266 00000 n
-0000000370 00000 n
-trailer<</Size 6 /Root 1 0 R>>
-startxref
-436
-%%EOF
-PDF;
     }
 }

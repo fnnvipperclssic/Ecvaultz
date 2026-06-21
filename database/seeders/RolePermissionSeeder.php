@@ -15,7 +15,7 @@ class RolePermissionSeeder extends Seeder
 
         // Create permissions
         $permissions = [
-            // File permissions
+            // File permissions (User)
             'files.view',
             'files.upload',
             'files.download',
@@ -26,13 +26,13 @@ class RolePermissionSeeder extends Seeder
             'files.move',
             'files.bulk-delete',
 
-            // Folder permissions
+            // Folder permissions (User)
             'folders.create',
             'folders.rename',
             'folders.delete',
             'folders.view',
 
-            // Share permissions
+            // Share permissions (User)
             'shares.create',
             'shares.revoke',
             'shares.view',
@@ -41,7 +41,7 @@ class RolePermissionSeeder extends Seeder
             'logs.view',
             'logs.export',
 
-            // User management permissions
+            // User management permissions (Admin)
             'users.manage',
             'users.view',
             'users.edit',
@@ -53,6 +53,23 @@ class RolePermissionSeeder extends Seeder
             'admin.dashboard',
             'admin.settings.manage',
             'admin.storage.view',
+
+            // Admin CRUD permissions — OWASP A01 enforced (Phase 3)
+            'admin.files.view',
+            'admin.files.delete',
+            'admin.folders.view',
+            'admin.folders.delete',
+            'admin.shares.view',
+            'admin.shares.revoke',
+            'admin.tags.view',
+            'admin.tags.delete',
+            'admin.datarooms.view',
+            'admin.datarooms.delete',
+            'admin.login-attempts.view',
+            'admin.security-questions.view',
+            'admin.notifications.view',
+            'admin.notifications.delete',
+            'admin.file-versions.view',
 
             // Settings
             'settings.view',

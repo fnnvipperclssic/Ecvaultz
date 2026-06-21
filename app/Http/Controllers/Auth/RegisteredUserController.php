@@ -76,6 +76,13 @@ class RegisteredUserController extends Controller
 
         ActivityLog::log($user->id, 'register', $request->ip(), $request->userAgent());
 
-        return redirect()->route('dashboard');
+        // Set mandatory security questions setup flag (OWASP A07)
+        session()->put('setup.security_questions', true);
+
+        // Redirect ke security questions setup — WAJIB sebelum akses dashboard
+        return redirect()->route('security-questions.create')->with(
+            'info',
+            'Welcome! Before you can access the application, please set up your security questions. These will be used to verify your identity when resetting your password.'
+        );
     }
 }

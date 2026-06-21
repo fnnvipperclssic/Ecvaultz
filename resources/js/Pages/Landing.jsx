@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from '@inertiajs/react';
 import ParticleBackground from '@/Components/ParticleBackground';
 import ThemeToggle from '@/Components/ThemeToggle';
@@ -151,6 +151,9 @@ export default function Landing() {
 
             {/* ═══════════ FEATURES ═══════════ */}
             <section id="features" className="relative py-24 sm:py-32">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-[500px] h-[500px] rounded-full bg-primary-600/3 blur-[150px]" />
+                </div>
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     <Reveal>
                         <div className="mx-auto max-w-2xl text-center mb-16">
@@ -162,15 +165,22 @@ export default function Landing() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[
-                            { icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', title: 'AES-256-GCM Encryption', desc: 'Files encrypted with unique per-user keys. Keys stored separately. Plaintext never touches disk.' },
-                            { icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', title: 'Two-Factor Auth', desc: 'TOTP authenticator apps. Recovery codes. Account lockout. Conditional access policies.' },
-                            { icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684', title: 'Secure Sharing', desc: 'Internal & external shares. Password protection. Expiry dates. Full access logging.' },
-                            { icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944', title: 'Virus Scanning', desc: 'ClamAV integration. MIME validation via content analysis. SHA-256 integrity verification.' },
-                            { icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Audit Trail', desc: 'Complete activity logs. IP tracking. Export for compliance. Immutable record keeping.' },
-                            { icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0', title: 'Role-Based Access', desc: 'Granular permissions. Admin & User roles. 28 permission scopes. Policy-based authorization.' },
+                            { icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', title: 'AES-256-GCM Encryption', desc: 'Military-grade encryption with unique per-user keys. Plaintext never touches disk — all operations happen in memory with secure key derivation.', highlight: 'Zero-knowledge' },
+                            { icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', title: 'Two-Factor Authentication', desc: 'TOTP-based 2FA via authenticator apps with 8 recovery codes. Account lockout after failed attempts prevents brute-force.', highlight: 'OWASP Compliant' },
+                            { icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684', title: 'Secure Sharing', desc: 'Internal & external shares with password protection, expiration dates, and per-share access logging. Revoke access anytime.', highlight: 'Full Control' },
+                            { icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944', title: 'Virus Scanning', desc: 'Integrated ClamAV engine scans every upload. MIME type verified via content analysis. SHA-256 hash ensures file integrity.', highlight: 'Auto-Scan' },
+                            { icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Complete Audit Trail', desc: 'Every action logged with timestamp, IP address, and user agent. Immutable records exportable for compliance audits.', highlight: 'GDPR Ready' },
+                            { icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0', title: 'Role-Based Access', desc: '28 granular permission scopes across Admin and User roles. Laravel policies enforce authorization at every endpoint.', highlight: 'Granular' },
                         ].map((f, i) => (
                             <Reveal key={i} delay={i * 100}>
-                                <div className="group glass rounded-2xl p-6 glass-hover transition-all duration-500">
+                                <div className="group glass rounded-2xl p-6 glass-hover transition-all duration-500 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 pointer-events-none">
+                                        {f.highlight && (
+                                            <span className="inline-block px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-300 bg-primary-500/10 rounded-bl-lg border-b border-l border-primary-500/20">
+                                                {f.highlight}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500/10 text-primary-400 group-hover:bg-primary-500/20 group-hover:text-primary-300 transition-all duration-300 group-hover:scale-110">
                                         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d={f.icon} /></svg>
                                     </div>
@@ -184,28 +194,34 @@ export default function Landing() {
             </section>
 
             {/* ═══════════ HOW IT WORKS ═══════════ */}
-            <section id="how" className="relative py-24 sm:py-32">
+            <section id="how" className="relative py-24 sm:py-32 bg-surface-50/30">
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     <Reveal>
                         <div className="mx-auto max-w-2xl text-center mb-16">
                             <p className="text-sm font-semibold text-primary-400 uppercase tracking-widest">Simple Workflow</p>
-                            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Secure in 4 steps</h2>
+                            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Get started in 4 simple steps</h2>
+                            <p className="mt-4 text-lg text-surface-500">From registration to fully encrypted storage — under 2 minutes.</p>
                         </div>
                     </Reveal>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
+                        {/* Connector line on desktop */}
+                        <div className="hidden lg:block absolute top-12 left-[calc(12.5%+2rem)] right-[calc(12.5%+2rem)] h-px bg-gradient-to-r from-primary-500/40 via-primary-500/20 to-primary-500/40" />
                         {[
-                            { step: '01', title: 'Create Account', desc: 'Sign up with email and a strong password. Enable 2FA for maximum protection.' },
-                            { step: '02', title: 'Upload Files', desc: 'Drag and drop. Every file is scanned, hashed, then encrypted before storage.' },
-                            { step: '03', title: 'Organize & Share', desc: 'Create folders. Share securely with internal users or external links.' },
-                            { step: '04', title: 'Monitor & Control', desc: 'Track all activity. Manage access. Stay in complete control.' },
+                            { step: '01', title: 'Create Account', desc: 'Sign up in seconds with email and a strong password. Enable 2FA with your authenticator app for maximum protection.', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                            { step: '02', title: 'Upload Files', desc: 'Drag & drop any file. Our engine scans, verifies integrity, then encrypts with your unique key before storage.', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
+                            { step: '03', title: 'Organize & Share', desc: 'Create folders, add tags. Share securely with password-protected links that auto-expire. Track every access.', icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316' },
+                            { step: '04', title: 'Monitor & Control', desc: 'Real-time activity dashboard. Audit logs with IP tracking. Manage permissions. Stay compliant effortlessly.', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
                         ].map((s, i) => (
                             <Reveal key={i} delay={i * 150}>
-                                <div className="text-center group">
-                                    <div className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600/15 text-primary-400 border border-primary-500/20 group-hover:bg-primary-600/25 group-hover:scale-110 transition-all duration-300">
-                                        <span className="text-xl font-bold">{s.step}</span>
+                                <div className="text-center group relative">
+                                    <div className="relative mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-100 border border-surface-300 group-hover:border-primary-500/30 group-hover:bg-primary-600/10 group-hover:scale-110 transition-all duration-300 z-10">
+                                        <span className="text-xl font-bold text-primary-400">{s.step}</span>
+                                    </div>
+                                    <div className="mb-2 mx-auto flex h-10 w-10 items-center justify-center rounded-lg text-surface-400 group-hover:text-primary-400 transition-colors">
+                                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d={s.icon} /></svg>
                                     </div>
                                     <h4 className="mb-2 text-base font-semibold text-white">{s.title}</h4>
-                                    <p className="text-sm text-surface-500">{s.desc}</p>
+                                    <p className="text-sm leading-relaxed text-surface-500">{s.desc}</p>
                                 </div>
                             </Reveal>
                         ))}

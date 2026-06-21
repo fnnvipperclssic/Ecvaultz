@@ -7,8 +7,8 @@ export default function RecoveryKit({ recoveryPhrase = [] }) {
     const { enqueueSnackbar } = useSnackbar();
     const [savedConfirmed, setSavedConfirmed] = useState(false);
 
-    // Ensure we have 12 words, pad with empty if needed
-    const words = Array.from({ length: 12 }, (_, i) => recoveryPhrase[i] || '');
+    // Ensure we have 24 words, pad with empty if needed
+    const words = Array.from({ length: 24 }, (_, i) => recoveryPhrase[i] || '');
 
     const handleCopy = () => {
         const phraseText = words.map((w, i) => `${i + 1}. ${w}`).join('\n');
@@ -47,10 +47,10 @@ export default function RecoveryKit({ recoveryPhrase = [] }) {
                 <div className="card">
                     <h3 className="text-base font-semibold text-surface-900 mb-1">Your Recovery Phrase</h3>
                     <p className="text-sm text-surface-500 mb-6">
-                        Write down these 12 words in order and keep them safe. Do not store them digitally.
+                        Write down these 24 words in order and keep them safe. Do not store them digitally.
                     </p>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-4 gap-3">
                         {words.map((word, i) => (
                             <div
                                 key={i}
@@ -93,7 +93,7 @@ export default function RecoveryKit({ recoveryPhrase = [] }) {
                                 I have saved my recovery phrase in a secure location
                             </span>
                             <p className="text-xs text-surface-500 mt-0.5">
-                                Checking this confirms you have stored the 12-word recovery phrase safely.
+                                Checking this confirms you have stored the 24-word recovery phrase safely.
                                 You will need it to recover your encrypted files if you forget your password.
                             </p>
                         </div>

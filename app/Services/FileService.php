@@ -137,8 +137,9 @@ class FileService
             throw new \RuntimeException('File access denied: invalid path.');
         }
 
-        // Decrypt file for download using per-user encryption key
-        $userKey = $this->encryption->getUserKey($user);
+        // Decrypt file for download using file owner's encryption key
+        // (shared files must use the owner's key, not the viewer's)
+        $userKey = $this->encryption->getUserKey($file->user);
         try {
             $decryptedPath = $this->encryption->decryptFileToTemp($fullPath, $userKey);
         } catch (\RuntimeException $e) {

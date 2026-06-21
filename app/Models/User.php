@@ -127,9 +127,22 @@ class User extends Authenticatable
         return $this->unreadNotifications()->count();
     }
 
+    /**
+     * Check if user has administrator privileges.
+     *
+     * Uses Spatie RBAC role check first (authoritative source),
+     * falls back to legacy is_admin column for backward compatibility.
+     *
+     * @return bool True if user is an administrator
+     */
     public function isAdmin(): bool
     {
-        return $this->is_admin;
+        // Check Spatie role first (authoritative)
+        if ($this->hasRole('Admin')) {
+            return true;
+        }
+        // Fallback to legacy column for backward compatibility
+        return (bool) $this->is_admin;
     }
 
     public function hasTwoFactorEnabled(): bool

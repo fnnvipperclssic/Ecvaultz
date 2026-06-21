@@ -76,15 +76,31 @@
    Surface colors handled automatically via CSS variables (--s-50 to --s-950)
    ═══════════════════════════════════════ */
 @layer utilities {
-    /* ── text-white → dark in light mode (except on colored buttons) ── */
-    [data-theme="light"] .text-white { color: rgb(var(--s-950) / 1) !important; }
+    /**
+     * Light mode text color adjustments.
+     *
+     * In light mode, `text-white` is remapped to near-black (--s-950) for
+     * readability on light backgrounds. Colored buttons (btn-primary, btn-neon)
+     * keep their white text because they have dark solid backgrounds that need
+     * white text in both light and dark modes.
+     *
+     * Note: these use plain CSS (not @apply) to avoid Tailwind circular
+     * dependency warnings during build.
+     */
+    [data-theme="light"] .text-white {
+        color: rgb(var(--s-950) / 1) !important;
+    }
+    /* Colored buttons — keep white text in light mode */
     [data-theme="light"] .btn-primary,
-    [data-theme="light"] .btn-primary.text-white,
-    [data-theme="light"] .btn-neon,
-    [data-theme="light"] .bg-primary-600,
+    [data-theme="light"] .btn-neon {
+        color: #ffffff !important;
+    }
+    /* Solid colored backgrounds that need white text */
     [data-theme="light"] .bg-primary-600.text-white,
     [data-theme="light"] .bg-red-600.text-white,
-    [data-theme="light"] .bg-emerald-600.text-white { color: #ffffff !important; }
+    [data-theme="light"] .bg-emerald-600.text-white {
+        color: #ffffff !important;
+    }
 
     /* ── Glass & Card backgrounds ── */
     [data-theme="light"] .glass,
@@ -381,8 +397,9 @@
                disabled:opacity-50 disabled:cursor-not-allowed;
     }
     .btn-primary {
-        @apply btn bg-primary-600 text-white shadow-glow-sm
+        @apply btn bg-primary-600 shadow-glow-sm
                hover:bg-primary-500 hover:shadow-glow active:scale-[0.98];
+        color: #ffffff;
     }
     .btn-secondary {
         @apply btn bg-surface-200 text-surface-700 border border-surface-300
@@ -404,7 +421,8 @@
                hover:bg-white/10 hover:border-white/20 hover:text-white active:scale-[0.98];
     }
     .btn-neon {
-        @apply btn bg-primary-600 text-white;
+        @apply btn bg-primary-600;
+        color: #ffffff;
         box-shadow: 0 0 5px rgba(139,69,255,0.4), 0 0 20px rgba(139,69,255,0.2), 0 0 40px rgba(139,69,255,0.1);
     }
     .btn-neon:hover {

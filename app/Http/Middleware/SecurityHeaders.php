@@ -19,10 +19,11 @@ class SecurityHeaders
     {
         $response = $next($request);
 
-        return $response->withHeaders([
+        $headers = [
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'DENY',
-            'X-XSS-Protection' => '1; mode=block',
+            // 'X-XSS-Protection' REMOVED — deprecated header, removed from modern browsers
+            // XSS protection is handled by CSP + React auto-escaping instead
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'Permissions-Policy' => 'camera=(), microphone=(), geolocation=()',
             'Cross-Origin-Resource-Policy' => 'same-origin',
@@ -36,17 +37,34 @@ class SecurityHeaders
             'Content-Security-Policy' => $this->buildCSP(),
             'Cache-Control' => 'no-store, no-cache, must-revalidate, proxy-revalidate',
             'Pragma' => 'no-cache',
-        ]);
+        ];
+
+        // BinaryFileResponse, StreamedResponse, etc. don't have withHeaders()
+        // Use headers->set() as a universal fallback
+        if (method_exists($response, 'withHeaders')) {
+            return $response->withHeaders($headers);
+        }
+
+        foreach ($headers as $key => $value) {
+            $response->headers->set($key, $value);
+        }
+
+        return $response;
     }
 
     protected function buildCSP(): string
     {
+        // Determine Vite dev server origin for local development
+        $isLocal = app()->environment('local', 'testing');
+        $viteOrigin = $isLocal ? 'http://127.0.0.1:5173 http://localhost:5173' : '';
+        $viteWs = $isLocal ? 'ws://127.0.0.1:5173 ws://localhost:5173' : '';
+
         $csp = [
-            "default-src 'self'",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net",
-            "img-src 'self' data: blob:",
-            "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net",
-            "connect-src 'self' ws://localhost:5173 http://localhost:5173",
+            "default-src 'self'" . ($isLocal ? " {$viteOrigin}" : ''),
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net" . ($isLocal ? " {$viteOrigin}" : ''),
+            "img-src 'self' data: blob:" . ($isLocal ? " {$viteOrigin}" : ''),
+            "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net" . ($isLocal ? " {$viteOrigin}" : ''),
+            "connect-src 'self'" . ($isLocal ? " {$viteWs} {$viteOrigin}" : ''),
             "frame-src 'none'",
             "object-src 'none'",
             "base-uri 'self'",
@@ -54,13 +72,15 @@ class SecurityHeaders
             "frame-ancestors 'none'",
         ];
 
-        // For development, allow unsafe-inline and unsafe-eval (needed for Vite HMR)
-        if (app()->environment('local', 'testing')) {
-            $csp[] = "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+        // For development, allow Vite HMR origins + unsafe-inline/unsafe-eval
+        if ($isLocal) {
+            $csp[] = "script-src 'self' 'unsafe-inline' 'unsafe-eval' {$viteOrigin}";
         } else {
             // Production: stricter CSP without unsafe-eval
             $csp[] = "script-src 'self' 'unsafe-inline'";
-            $csp[] = "upgrade-insecure-requests";
+            if (env('FORCE_HTTPS', false)) {
+                $csp[] = "upgrade-insecure-requests";
+            }
         }
 
         return implode('; ', $csp);

@@ -15,16 +15,26 @@ export default function TagSelector({ fileUuid, initialTags = [] }) {
     // Load all user tags on mount
     useEffect(() => {
         if (open && allTags.length === 0) {
+            const abortController = new AbortController();
             setLoading(true);
-            fetch('/tags')
+            fetch('/tags', { signal: abortController.signal })
                 .then((res) => res.json())
                 .then((data) => {
-                    setAllTags(Array.isArray(data) ? data : data.tags || []);
+                    if (!abortController.signal.aborted) {
+                        setAllTags(Array.isArray(data) ? data : data.tags || []);
+                    }
                 })
-                .catch(() => {
-                    enqueueSnackbar('Failed to load tags', { variant: 'error' });
+                .catch((err) => {
+                    if (!abortController.signal.aborted) {
+                        enqueueSnackbar('Failed to load tags', { variant: 'error' });
+                    }
                 })
-                .finally(() => setLoading(false));
+                .finally(() => {
+                    if (!abortController.signal.aborted) {
+                        setLoading(false);
+                    }
+                });
+            return () => abortController.abort();
         }
     }, [open, allTags.length, enqueueSnackbar]);
 

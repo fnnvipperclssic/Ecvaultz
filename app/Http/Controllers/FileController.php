@@ -58,7 +58,7 @@ class FileController extends Controller
         // Sort (whitelist allowed columns to prevent SQL column injection)
         $allowedSorts = ['original_name', 'size', 'mime_type', 'uploaded_at', 'download_count', 'created_at'];
         $sort = in_array($request->input('sort'), $allowedSorts) ? $request->input('sort') : 'uploaded_at';
-        $direction = in_array(strtolower($request->input('direction')), ['asc', 'desc']) ? $request->input('direction') : 'desc';
+        $direction = in_array(strtolower($request->input('direction', 'desc')), ['asc', 'desc']) ? $request->input('direction', 'desc') : 'desc';
         $query->orderBy($sort, $direction);
 
         $files = $query->paginate(20)->through(fn (File $file) => [
@@ -73,8 +73,8 @@ class FileController extends Controller
             'is_encrypted' => $file->is_encrypted,
             'is_favorited' => $file->is_favorited,
             'download_count' => $file->download_count,
-            'uploaded_at' => $file->uploaded_at->format('Y-m-d H:i'),
-            'uploaded_at_human' => $file->uploaded_at->diffForHumans(),
+            'uploaded_at' => $file->uploaded_at?->format('Y-m-d H:i'),
+            'uploaded_at_human' => $file->uploaded_at?->diffForHumans(),
             'can_preview' => $file->isPreviewable(),
             'extension' => $file->getExtension(),
             'tags_count' => $file->tags_count,
@@ -85,11 +85,12 @@ class FileController extends Controller
         $folders = Folder::where('user_id', $user->id)
             ->when($folderId, fn ($q) => $q->where('parent_id', $folderId))
             ->when(!$folderId, fn ($q) => $q->whereNull('parent_id'))
+            ->withCount('files')
             ->get()
             ->map(fn ($f) => [
                 'uuid' => $f->uuid,
                 'name' => $f->name,
-                'file_count' => $f->files()->count(),
+                'file_count' => $f->files_count,
             ]);
 
         $breadcrumbs = $this->buildBreadcrumbs($folderId ? Folder::find($folderId) : null);
@@ -161,9 +162,10 @@ class FileController extends Controller
 
         $filePath = Storage::disk('private')->path($file->path);
 
-        // Decrypt file for preview
+        // Decrypt file for preview using file owner's encryption key
+        // (shared files must use the owner's key, not the viewer's)
         $encryptionService = app(\App\Services\FileEncryptionService::class);
-        $userKey = $encryptionService->getUserKey($request->user());
+        $userKey = $encryptionService->getUserKey($file->user);
         try {
             $plaintext = $encryptionService->decryptFile($filePath, $userKey);
             $base64Content = base64_encode($plaintext);
@@ -517,9 +519,9 @@ class FileController extends Controller
         $isOwner = $file->isOwnedBy($user);
         $isShareContext = $request->has('share_token') || $request->session()->has('share_context_' . $file->uuid);
 
-        // Decrypt file for preview
+        // Decrypt file for preview using file owner's encryption key
         $encryptionService = app(\App\Services\FileEncryptionService::class);
-        $userKey = $encryptionService->getUserKey($user);
+        $userKey = $encryptionService->getUserKey($file->user);
         $filePath = \Illuminate\Support\Facades\Storage::disk('private')->path($file->path);
 
         try {

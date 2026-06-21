@@ -38,6 +38,11 @@
 !storage/app/public/.gitkeep
 /storage/debugbar/
 
+# --- Cookie/session dumps (never commit) ---
+cjar
+cookies.txt
+*.cookies
+
 # --- Cache & temp ---
 .phpunit.result.cache
 .php-cs-fixer.cache

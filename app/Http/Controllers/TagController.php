@@ -70,9 +70,7 @@ class TagController extends Controller
      */
     public function update(Request $request, Tag $tag): RedirectResponse
     {
-        if ($tag->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('update', $tag);
 
         $request->validate([
             'name' => ['required', 'string', 'max:50', 'unique:tags,name,' . $tag->id . ',id,user_id,' . $request->user()->id],
@@ -99,9 +97,7 @@ class TagController extends Controller
      */
     public function destroy(Request $request, Tag $tag): RedirectResponse
     {
-        if ($tag->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $tag);
 
         $tagName = $tag->name;
 
@@ -160,9 +156,7 @@ class TagController extends Controller
             abort(403);
         }
 
-        if ($tag->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $tag);
 
         $file->tags()->detach($tag->id);
 

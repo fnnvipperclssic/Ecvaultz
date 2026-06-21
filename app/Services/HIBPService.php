@@ -34,11 +34,15 @@ class HIBPService
 
         $cacheKey = 'hibp_' . $prefix;
 
-        $responseBody = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($prefix) {
+        // OWASP A10 (SSRF Prevention): validasi URL sebelum outbound request
+        $apiUrl = self::API_URL . $prefix;
+        \App\Http\Middleware\PreventSsrf::validateUrl($apiUrl);
+
+        $responseBody = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($prefix, $apiUrl) {
             try {
                 $response = Http::timeout(self::HTTP_TIMEOUT)
                     ->withHeaders(['User-Agent' => config('app.name', 'Ecvaultz') . '-HIBP-Checker/1.0'])
-                    ->get(self::API_URL . $prefix);
+                    ->get($apiUrl);
 
                 if ($response->successful()) {
                     return $response->body();

@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { Link, router } from '@inertiajs/react';
 
 export default function ContextMenu({ x, y, isOpen, onClose, file, onPreview, onDownload, onShare, onRename, onDuplicate, onMoveToFolder, onTags, onFavorite, onDelete }) {
     const menuRef = useRef(null);

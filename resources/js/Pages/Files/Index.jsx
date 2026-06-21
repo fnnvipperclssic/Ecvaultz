@@ -312,6 +312,7 @@ export default function FilesIndex({ files, folders, breadcrumbs, currentFolderI
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
                             placeholder="Search files..."
+                            aria-label="Search files"
                             className="input pl-10"
                         />
                     </div>
@@ -432,7 +433,7 @@ export default function FilesIndex({ files, folders, breadcrumbs, currentFolderI
                 {/* Files table */}
                 <div className="card overflow-hidden !p-0" data-onboard="file-table">
                     {files?.data?.length > 0 ? (
-                        <table className="w-full">
+                        <table className="w-full" aria-label="Files list">
                             <thead>
                                 <tr className="border-b border-surface-200 bg-surface-50">
                                     <th className="table-header w-10">

@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Log;
 /**
  * Encryption Key Recovery Kit Service.
  *
- * Uses the BIP39 English wordlist to encode a user's encryption key
- * into a human-readable 12-word mnemonic phrase, and to decode it
+ * Uses the BIP39 English wordlist to encode a user's 32-byte encryption key
+ * into a human-readable 24-word mnemonic phrase, and to decode it
  * back to the original key. Also provides PDF generation for printing.
  */
 class RecoveryKitService
@@ -228,7 +228,10 @@ class RecoveryKitService
     ];
 
     /**
-     * Encode an encryption key (base64-encoded) into a 12-word BIP39 mnemonic.
+     * Encode an encryption key (base64-encoded) into a 24-word BIP39 mnemonic.
+     *
+     * Uses BIP39 standard: 256 bits of entropy + 8-bit checksum = 264 bits = 24 words.
+     * This ensures the FULL 32-byte encryption key is recoverable.
      *
      * @param string $encryptionKey The base64-encoded encryption key.
      * @return array{mnemonic: string, words: array} The mnemonic phrase and individual words.
@@ -242,21 +245,21 @@ class RecoveryKitService
             throw new \InvalidArgumentException('Invalid encryption key: must be 32 bytes of base64-encoded data.');
         }
 
-        // Convert 32 bytes to a binary string and take 132 bits (12 words * 11 bits)
-        // BIP39 uses 11 bits per word, so 12 words = 132 bits
-        // We use the first 16 bytes (128 bits) + 4-bit checksum = 132 bits for 12 words
+        // Convert full 32 bytes (256 bits) to binary string
         $bitString = '';
-        for ($i = 0; $i < 16; $i++) {
+        for ($i = 0; $i < 32; $i++) {
             $bitString .= str_pad(decbin(ord($keyBytes[$i])), 8, '0', STR_PAD_LEFT);
         }
 
-        // Compute checksum: first 4 bits of SHA-256 hash
-        $checksum = ord(hash('sha256', substr($keyBytes, 0, 16), true)) >> 4;
-        $bitString .= str_pad(decbin($checksum), 4, '0', STR_PAD_LEFT);
+        // BIP39: 256 bits entropy → 8-bit checksum (first byte of SHA-256)
+        // Total: 264 bits = 24 words × 11 bits
+        $hash = hash('sha256', $keyBytes, true);
+        $checksum = ord($hash[0]) >> 0; // Take all 8 bits for 256-bit entropy
+        $bitString .= str_pad(decbin($checksum), 8, '0', STR_PAD_LEFT);
 
         // Split into 11-bit chunks and map to words
         $words = [];
-        for ($i = 0; $i < 12; $i++) {
+        for ($i = 0; $i < 24; $i++) {
             $chunk = substr($bitString, $i * 11, 11);
             $index = bindec($chunk);
             $words[] = self::BIP39_WORDS[$index];
@@ -269,15 +272,18 @@ class RecoveryKitService
     }
 
     /**
-     * Decode a 12-word BIP39 mnemonic back to the original encryption key.
+     * Decode a 24-word BIP39 mnemonic back to the original encryption key.
      *
-     * @param array $mnemonic Array of 12 BIP39 words.
+     * Reverses generateMnemonic(): reconstructs the full 32 bytes from
+     * 24 BIP39 words and verifies the 8-bit checksum.
+     *
+     * @param array $mnemonic Array of 24 BIP39 words.
      * @return string The base64-encoded encryption key.
      */
     public function recoverKey(array $mnemonic): string
     {
-        if (count($mnemonic) !== 12) {
-            throw new \InvalidArgumentException('Mnemonic must contain exactly 12 words.');
+        if (count($mnemonic) !== 24) {
+            throw new \InvalidArgumentException('Mnemonic must contain exactly 24 words.');
         }
 
         // Build a reverse lookup for BIP39 words
@@ -293,31 +299,26 @@ class RecoveryKitService
             $bitString .= str_pad(decbin($index), 11, '0', STR_PAD_LEFT);
         }
 
-        // Take first 128 bits (16 bytes) — the remaining 4 bits are checksum
-        $keyBits = substr($bitString, 0, 128);
-        $checksumBits = substr($bitString, 128, 4);
+        // Take first 256 bits (32 bytes) — the remaining 8 bits are checksum
+        $keyBits = substr($bitString, 0, 256);
+        $checksumBits = substr($bitString, 256, 8);
 
-        // Reconstruct key bytes
+        // Reconstruct full 32-byte key
         $keyBytes = '';
-        for ($i = 0; $i < 16; $i++) {
+        for ($i = 0; $i < 32; $i++) {
             $byte = substr($keyBits, $i * 8, 8);
             $keyBytes .= chr(bindec($byte));
         }
 
-        // Verify checksum
-        $expectedChecksum = ord(hash('sha256', $keyBytes, true)) >> 4;
+        // Verify checksum: first 8 bits of SHA-256 of the key
+        $expectedChecksum = ord(hash('sha256', $keyBytes, true)[0]);
         $actualChecksum = bindec($checksumBits);
 
         if ($expectedChecksum !== $actualChecksum) {
             throw new \RuntimeException('Mnemonic checksum verification failed. The phrase may be incorrect.');
         }
 
-        // Pad with zeros to make 32 bytes (as the original key)
-        // Note: The mnemonic only encodes 16 bytes of entropy.
-        // For a full 32-byte key, we derive the second half using a key derivation approach.
-        $fullKeyBytes = $keyBytes . hash('sha256', $keyBytes, true);
-
-        return base64_encode($fullKeyBytes);
+        return base64_encode($keyBytes);
     }
 
     /**
@@ -337,9 +338,9 @@ class RecoveryKitService
         $userName = $user->name;
         $userEmail = $user->email;
 
-        // Format mnemonic words in numbered pairs for readability
+        // Format mnemonic words in numbered pairs for readability (24 words = 12 pairs)
         $wordsHtml = '';
-        for ($i = 0; $i < 12; $i += 2) {
+        for ($i = 0; $i < 24; $i += 2) {
             $num1 = $i + 1;
             $num2 = $i + 2;
             $word1 = htmlspecialchars($mnemonic[$i] ?? '', ENT_QUOTES, 'UTF-8');

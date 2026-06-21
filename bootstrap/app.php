@@ -17,6 +17,9 @@ use Illuminate\Http\Middleware\FrameGuard;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\RequireTwoFactor;
+use App\Http\Middleware\PreventSsrf;
+use App\Http\Middleware\CheckPasswordExpiry;
+use App\Http\Middleware\CheckSecurityQuestions;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -51,6 +54,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'inertia' => HandleInertiaRequests::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'password.expiry' => CheckPasswordExpiry::class,         // OWASP A07: Password expiry enforcement
+            'security.setup' => CheckSecurityQuestions::class,       // OWASP A07: Mandatory security questions
+            'ssrf' => PreventSsrf::class,                            // OWASP A10: SSRF protection
         ]);
 
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', '127.0.0.1,::1'));
@@ -63,9 +69,14 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Console/Commands',
     ])
     ->withSchedule(function ($schedule) {
+        // Daily cleanup: permanently delete files past soft-delete retention
         $schedule->command('ecvaultz:cleanup-expired-files')->dailyAt('02:00');
+        // Hourly: remove expired file shares
         $schedule->command('ecvaultz:cleanup-expired-shares')->hourly();
+        // Daily: purge activity logs older than 90 days
         $schedule->command('ecvaultz:cleanup-activity-logs --days=90')->dailyAt('03:00');
+        // Hourly: send queued pending notifications
+        $schedule->command('ecvaultz:send-pending-notifications')->hourly();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->dontReport([]);

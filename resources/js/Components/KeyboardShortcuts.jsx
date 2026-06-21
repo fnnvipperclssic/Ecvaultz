@@ -48,7 +48,7 @@ export default function KeyboardShortcuts({ isOpen, onClose }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
             <div className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl bg-surface-100 shadow-xl animate-slide-up">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-surface-300">

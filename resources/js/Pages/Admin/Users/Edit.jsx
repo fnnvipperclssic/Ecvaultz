@@ -30,9 +30,7 @@ export default function AdminUsersEdit({ targetUser, allRoles, allPermissions })
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        patch('/admin/users/' + targetUser.id, {
-            onSuccess: () => {},
-        });
+        patch('/admin/users/' + targetUser.id);
     };
 
     return (

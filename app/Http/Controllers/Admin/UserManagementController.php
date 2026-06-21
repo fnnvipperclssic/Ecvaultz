@@ -52,21 +52,42 @@ class UserManagementController extends Controller
 
     public function show(User $user): Response
     {
+        // Compute storage used by this user
+        $storageUsed = \App\Models\File::where('user_id', $user->id)
+            ->whereNull('deleted_at')
+            ->sum('size');
+        $storageQuota = $user->storage_quota ?? config('security.default_storage_quota', 5368709120);
+
+        // Recent activity logs for this user
+        $activityLogs = ActivityLog::where('user_id', $user->id)
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn ($log) => [
+                'action' => $log->action,
+                'ip_address' => $log->ip_address,
+                'created_at' => $log->created_at->format('Y-m-d H:i'),
+            ]);
+
+        // Send data under 'user' key to match the React component's expected prop
         return Inertia::render('Admin/Users/Show', [
-            'targetUser' => [
+            'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
-                'two_factor_enabled' => $user->two_factor_enabled,
-                'email_verified' => $user->hasVerifiedEmail(),
+                'two_factor_enabled' => (bool) $user->two_factor_enabled,
+                'email_verified_at' => $user->hasVerifiedEmail() ? $user->email_verified_at?->format('Y-m-d H:i') : null,
                 'last_login_at' => $user->last_login_at?->format('Y-m-d H:i'),
                 'last_login_ip' => $user->last_login_ip,
                 'password_changed_at' => $user->password_changed_at?->format('Y-m-d H:i'),
                 'files_count' => $user->files()->count(),
+                'storage_used' => $storageUsed,
+                'storage_quota' => (int) $storageQuota,
                 'created_at' => $user->created_at->format('Y-m-d H:i'),
-                'is_deleted' => $user->trashed(),
+                'deleted_at' => $user->deleted_at?->format('Y-m-d H:i'),
+                'activity_logs' => $activityLogs,
             ],
             'allRoles' => Role::all()->pluck('name'),
             'allPermissions' => \Spatie\Permission\Models\Permission::all()->pluck('name'),

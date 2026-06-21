@@ -142,6 +142,7 @@ export default function GlobalSearch({ placeholder = 'Search files...' }) {
                         if (query.length >= 2 && results.length > 0) setOpen(true);
                     }}
                     placeholder={placeholder}
+                    aria-label="Search files"
                     className="input pl-10 w-full"
                     data-onboard="search-bar"
                 />

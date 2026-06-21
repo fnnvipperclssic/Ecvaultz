@@ -82,9 +82,7 @@ class DataRoomController extends Controller
      */
     public function show(Request $request, DataRoom $room): Response
     {
-        if ($room->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('view', $room);
 
         $files = $room->files()->paginate(20)->through(fn (File $file) => [
             'uuid' => $file->uuid,
@@ -126,9 +124,7 @@ class DataRoomController extends Controller
      */
     public function update(Request $request, DataRoom $room): RedirectResponse
     {
-        if ($room->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('update', $room);
 
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -152,9 +148,7 @@ class DataRoomController extends Controller
      */
     public function destroy(Request $request, DataRoom $room): RedirectResponse
     {
-        if ($room->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $room);
 
         ActivityLog::log($request->user()->id, 'data_room_deleted', $request->ip(), $request->userAgent(), [
             'data_room_id' => $room->id,
@@ -172,9 +166,7 @@ class DataRoomController extends Controller
      */
     public function addFile(Request $request, DataRoom $room): RedirectResponse
     {
-        if ($room->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('manageFiles', $room);
 
         $validated = $request->validate([
             'file_uuid' => ['required', 'string', 'uuid', 'exists:files,uuid'],
@@ -208,9 +200,7 @@ class DataRoomController extends Controller
      */
     public function removeFile(Request $request, DataRoom $room, File $file): RedirectResponse
     {
-        if ($room->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('manageFiles', $room);
 
         $room->files()->detach($file->uuid);
 
@@ -227,9 +217,7 @@ class DataRoomController extends Controller
      */
     public function inviteUser(Request $request, DataRoom $room): RedirectResponse
     {
-        if ($room->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('manageInvites', $room);
 
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255'],
@@ -267,9 +255,7 @@ class DataRoomController extends Controller
      */
     public function revokeInvite(Request $request, DataRoom $room, string $inviteId): RedirectResponse
     {
-        if ($room->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('manageInvites', $room);
 
         $invite = $room->invites()->findOrFail($inviteId);
 

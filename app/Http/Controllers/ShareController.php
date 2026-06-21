@@ -207,9 +207,7 @@ class ShareController extends Controller
     {
         $share = FileShare::where('uuid', $shareUuid)->firstOrFail();
 
-        if ($share->shared_by_user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $share);
 
         ActivityLog::log(
             $request->user()->id,
@@ -295,7 +293,7 @@ class ShareController extends Controller
         }
 
         $file = $share->file;
-        $filePath = \Illuminate\Support\Facades\Storage::disk('private')->path($file->path);
+        $filePath = Storage::disk('private')->path($file->path);
 
         if (!file_exists($filePath)) {
             abort(404);
