@@ -46,7 +46,7 @@ class UserManagementController extends Controller
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
             'roles' => $roles,
-            'filters' => $request->only(['search', 'role']),
+            'filters' => (object) $request->only(['search', 'role']),
         ]);
     }
 

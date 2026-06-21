@@ -52,8 +52,7 @@ class Tag extends Model
 
     public function files(): BelongsToMany
     {
-        return $this->belongsToMany(File::class, 'file_tag', 'tag_id', 'file_uuid', 'id', 'uuid')
-            ->withTimestamps();
+        return $this->belongsToMany(File::class, 'file_tag', 'tag_id', 'file_uuid', 'id', 'uuid');
     }
 
     /**

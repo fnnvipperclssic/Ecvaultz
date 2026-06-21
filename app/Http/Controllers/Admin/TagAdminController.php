@@ -47,7 +47,7 @@ class TagAdminController extends Controller
 
         return Inertia::render('Admin/Tags/Index', [
             'tags' => $tags,
-            'filters' => $request->only(['search', 'user_id', 'sort', 'order']),
+            'filters' => (object) $request->only(['search', 'user_id', 'sort', 'order']),
             'stats' => [
                 'total_tags' => Tag::count(),
             ],

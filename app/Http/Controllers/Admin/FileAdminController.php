@@ -71,7 +71,7 @@ class FileAdminController extends Controller
 
         return Inertia::render('Admin/Files/Index', [
             'files' => $files,
-            'filters' => $request->only(['search', 'user_id', 'mime_type', 'sort', 'order', 'trashed']),
+            'filters' => (object) $request->only(['search', 'user_id', 'mime_type', 'sort', 'order', 'trashed']),
             'stats' => [
                 'total_files' => $totalFiles,
                 'total_size' => $totalSize,

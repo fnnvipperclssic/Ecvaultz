@@ -77,13 +77,6 @@ Thumbs.db
 docker-compose.override.yml
 
 # --- Project analysis (local only, large files) ---
-analisis-project.md
-Laporan_Proyek_Keamanan_Web_Terstruktur.md
-Rekomendasi-up.md
-doc-dev.md
-doc-vuln.md
-hasil.docx.md
-Cara-Jalankan.txt
 *.txt.backup
 docker-entrypoint.sh
 nginx.conf

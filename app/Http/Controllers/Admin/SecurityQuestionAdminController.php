@@ -58,7 +58,7 @@ class SecurityQuestionAdminController extends Controller
 
         return Inertia::render('Admin/SecurityQuestions/Index', [
             'users' => $users,
-            'filters' => $request->only(['search', 'sort', 'order']),
+            'filters' => (object) $request->only(['search', 'sort', 'order']),
             'stats' => [
                 'users_with_questions' => \App\Models\User::whereHas('securityQuestions')->count(),
                 'users_without_questions' => $usersWithout,

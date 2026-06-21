@@ -73,7 +73,7 @@ class LoginAttemptAdminController extends Controller
 
         return Inertia::render('Admin/LoginAttempts/Index', [
             'attempts' => $attempts,
-            'filters' => $request->only(['success', 'email', 'ip_address', 'failure_reason', 'sort', 'order']),
+            'filters' => (object) $request->only(['success', 'email', 'ip_address', 'failure_reason', 'sort', 'order']),
             'stats' => $stats,
         ]);
     }

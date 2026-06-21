@@ -52,7 +52,7 @@ class NotificationAdminController extends Controller
 
         return Inertia::render('Admin/Notifications/Index', [
             'notifications' => $notifications,
-            'filters' => $request->only(['search', 'read', 'sort', 'order']),
+            'filters' => (object) $request->only(['search', 'read', 'sort', 'order']),
             'stats' => [
                 'total' => Notification::count(),
                 'unread' => Notification::whereNull('read_at')->count(),

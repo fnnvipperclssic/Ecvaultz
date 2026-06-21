@@ -49,7 +49,7 @@ class ActivityLogAdminController extends Controller
         return Inertia::render('Admin/ActivityLog', [
             'logs' => $logs,
             'actionTypes' => $actionTypes,
-            'filters' => $request->only(['action', 'user_id', 'date_from', 'date_to']),
+            'filters' => (object) $request->only(['action', 'user_id', 'date_from', 'date_to']),
         ]);
     }
 

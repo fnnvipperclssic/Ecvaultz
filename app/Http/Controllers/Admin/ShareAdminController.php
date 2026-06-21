@@ -55,7 +55,7 @@ class ShareAdminController extends Controller
 
         return Inertia::render('Admin/Shares/Index', [
             'shares' => $shares,
-            'filters' => $request->only(['search', 'type', 'sort', 'order']),
+            'filters' => (object) $request->only(['search', 'type', 'sort', 'order']),
             'stats' => [
                 'total_shares' => FileShare::count(),
                 'internal_shares' => FileShare::where('type', 'internal')->count(),

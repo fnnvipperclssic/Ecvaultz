@@ -50,7 +50,7 @@ class FileVersionAdminController extends Controller
 
         return Inertia::render('Admin/FileVersions/Index', [
             'versions' => $versions,
-            'filters' => $request->only(['search', 'user_id', 'sort', 'order']),
+            'filters' => (object) $request->only(['search', 'user_id', 'sort', 'order']),
             'stats' => [
                 'total_versions' => FileVersion::count(),
                 'total_size' => FileVersion::sum('size'),

@@ -50,7 +50,7 @@ class DataRoomAdminController extends Controller
 
         return Inertia::render('Admin/DataRooms/Index', [
             'dataRooms' => $dataRooms,
-            'filters' => $request->only(['search', 'user_id', 'sort', 'order']),
+            'filters' => (object) $request->only(['search', 'user_id', 'sort', 'order']),
             'stats' => [
                 'total_rooms' => DataRoom::count(),
                 'active_rooms' => DataRoom::where('is_active', true)->count(),

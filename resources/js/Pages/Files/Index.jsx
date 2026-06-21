@@ -19,8 +19,12 @@ export default function FilesIndex({ files, folders, breadcrumbs, currentFolderI
     const [showNewFolder, setShowNewFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const [viewMode, setViewMode] = useState('list');
-    const [searchQuery, setSearchQuery] = useState(filters?.search || '');
-    const [activeFilter, setActiveFilter] = useState(filters?.filter || 'all');
+    const [searchQuery, setSearchQuery] = useState(
+        (filters && typeof filters === 'object' && !Array.isArray(filters) && typeof filters.search === 'string') ? filters.search : ''
+    );
+    const [activeFilter, setActiveFilter] = useState(
+        (filters && typeof filters === 'object' && !Array.isArray(filters) && typeof filters.filter === 'string') ? filters.filter : 'all'
+    );
     const [editingDescription, setEditingDescription] = useState(null);
     const [descriptionText, setDescriptionText] = useState('');
     const [showExpiryModal, setShowExpiryModal] = useState(null);
@@ -622,7 +626,50 @@ export default function FilesIndex({ files, folders, breadcrumbs, currentFolderI
                         <p className="text-sm text-surface-500">
                             Showing {files.from} to {files.to} of {files.total} files
                         </p>
-                        <div className="flex gap-1" dangerouslySetInnerHTML={{ __html: files.links.join('') }} />
+                        <div className="flex gap-1">
+                            {files.links.map((link, i) => {
+                                const isDisabled = !link.url;
+                                const isActive = link.active;
+                                const isPrev = link.label.includes('Previous') || link.label.includes('&laquo;');
+                                const isNext = link.label.includes('Next') || link.label.includes('&raquo;');
+
+                                // Strip HTML entities from label
+                                const label = link.label.replace(/&[a-z]+;/gi, '');
+
+                                if (isActive) {
+                                    return (
+                                        <span
+                                            key={i}
+                                            className="inline-flex items-center justify-center min-w-[2rem] h-8 rounded-lg px-2 text-xs font-semibold bg-primary-600 text-white shadow-glow-sm"
+                                        >
+                                            {label}
+                                        </span>
+                                    );
+                                }
+
+                                if (isDisabled) {
+                                    return (
+                                        <span
+                                            key={i}
+                                            className="inline-flex items-center justify-center min-w-[2rem] h-8 rounded-lg px-2 text-xs font-medium text-surface-400 cursor-not-allowed select-none"
+                                        >
+                                            {isPrev ? '‹' : isNext ? '›' : label}
+                                        </span>
+                                    );
+                                }
+
+                                return (
+                                    <Link
+                                        key={i}
+                                        href={link.url || '#'}
+                                        preserveScroll
+                                        className="inline-flex items-center justify-center min-w-[2rem] h-8 rounded-lg px-2 text-xs font-medium text-surface-500 hover:bg-surface-200 hover:text-surface-700 transition-colors"
+                                    >
+                                        {isPrev ? '‹' : isNext ? '›' : label}
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
             </div>

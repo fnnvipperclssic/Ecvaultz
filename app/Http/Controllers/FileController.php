@@ -100,7 +100,12 @@ class FileController extends Controller
             'folders' => $folders,
             'breadcrumbs' => $breadcrumbs,
             'currentFolderId' => $folderId,
-            'filters' => $request->only(['search', 'sort', 'direction']),
+            'filters' => [
+                'search' => $request->input('search'),
+                'filter' => $request->input('filter', 'all'),
+                'sort' => $request->input('sort', 'uploaded_at'),
+                'direction' => $request->input('direction', 'desc'),
+            ],
         ]);
     }
 
@@ -354,7 +359,7 @@ class FileController extends Controller
                 'mime_type' => $file->mime_type,
                 'size' => $file->getSizeForHumans(),
                 'size_bytes' => $file->size,
-                'uploaded_at' => $file->uploaded_at->format('Y-m-d H:i'),
+                'uploaded_at' => $file->uploaded_at?->format('Y-m-d H:i'),
                 'extension' => $file->getExtension(),
                 'is_favorited' => $file->is_favorited,
             ]);

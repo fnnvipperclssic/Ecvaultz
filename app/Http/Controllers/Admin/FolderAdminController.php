@@ -47,7 +47,7 @@ class FolderAdminController extends Controller
 
         return Inertia::render('Admin/Folders/Index', [
             'folders' => $folders,
-            'filters' => $request->only(['search', 'user_id', 'sort', 'order']),
+            'filters' => (object) $request->only(['search', 'user_id', 'sort', 'order']),
             'stats' => [
                 'total_folders' => Folder::count(),
                 'root_folders' => Folder::whereNull('parent_id')->count(),

@@ -37,7 +37,7 @@ class ActivityLogController extends Controller
         return Inertia::render('ActivityLog', [
             'logs' => $logs,
             'actionTypes' => $actionTypes,
-            'filters' => $request->only('action'),
+            'filters' => (object) $request->only('action'),
         ]);
     }
 
