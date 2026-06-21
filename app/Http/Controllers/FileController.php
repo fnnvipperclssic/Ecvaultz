@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -134,7 +135,7 @@ class FileController extends Controller
         return back()->with('success', count($uploaded) . ' file(s) uploaded successfully.');
     }
 
-    public function download(Request $request, string $uuid): StreamedResponse|RedirectResponse
+    public function download(Request $request, string $uuid): BinaryFileResponse|RedirectResponse
     {
         $file = File::where('uuid', $uuid)->firstOrFail();
 
